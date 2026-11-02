@@ -1,0 +1,56 @@
+name: Publicar version
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  construir:
+    runs-on: windows-latest
+    env:
+      ETIQUETA: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Poner el numero de version en el programa
+        run: python poner_version.py "$env:ETIQUETA"
+
+      - name: Compilar el programa
+        run: >
+          pyinstaller --onefile --windowed --clean
+          --name Calculadora_Dream_Travel
+          --icon Logo_Ovalado.ico
+          --add-data "Logo_Ovalado.ico;."
+          --add-data "Logo_Letras_Blanco.png;."
+          --hidden-import win32clipboard
+          calculadora_dream_travel.py
+
+      - name: Instalar Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Crear el instalador
+        run: |
+          $version = $env:ETIQUETA.TrimStart("v")
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" instalador.iss
+
+      - name: Publicar la version en GitHub
+        run: |
+          $archivo = "Output/Calculadora_Dream_Travel_Setup.exe"
+          gh release view "$env:ETIQUETA" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "$env:ETIQUETA" $archivo --clobber
+          } else {
+            gh release create "$env:ETIQUETA" $archivo --title "Version $env:ETIQUETA" --generate-notes
+          }
