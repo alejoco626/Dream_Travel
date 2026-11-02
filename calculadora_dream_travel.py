@@ -2104,6 +2104,8 @@ def hilo_descargar(info, cola):
 
 
 def instalar_actualizacion(ruta_instalador):
+    [os.environ.pop(k) for k in list(os.environ) if k.startswith("_PYI") or k == "_MEIPASS2"]
+    os.environ["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
     subprocess.Popen(
         [ruta_instalador, "/SILENT", "/NORESTART", "/CLOSEAPPLICATIONS"],
         close_fds=True,
