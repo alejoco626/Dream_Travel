@@ -47,3 +47,13 @@ Type: filesandordirs; Name: "{app}\_internal"
 Filename: "{app}\Calculadora_Dream_Travel.exe"; Description: "Abrir la calculadora"; Flags: nowait postinstall skipifsilent
 ; Actualizacion automatica (modo silencioso): vuelve a abrir el programa sola.
 Filename: "{app}\Calculadora_Dream_Travel.exe"; Flags: nowait skipifnotsilent
+
+[Code]
+function SetEnvironmentVariable(lpName, lpValue: String): Boolean;
+external 'SetEnvironmentVariableW@kernel32.dll stdcall';
+
+function InitializeSetup(): Boolean;
+begin
+SetEnvironmentVariable('PYINSTALLER_RESET_ENVIRONMENT', '1');
+Result := True;
+end;
