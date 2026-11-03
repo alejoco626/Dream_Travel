@@ -8,7 +8,7 @@ version = sys.argv[1].lstrip("vV")
 if not re.fullmatch(r"\d+(\.\d+){1,2}", version):
     sys.exit(f"Version no valida: {sys.argv[1]} (usa algo como v1.0.1)")
 
-ruta = "calculadora_dream_travel.py"
+ruta = "calculadora/config.py"
 with open(ruta, encoding="utf-8") as archivo:
     texto = archivo.read()
 

@@ -24,6 +24,9 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r requirements.txt pyinstaller
 
+      - name: Ejecutar pruebas
+        run: python -m unittest discover -s tests -t . -v
+
       - name: Poner el numero de version en el programa
         run: python poner_version.py "$env:ETIQUETA"
 

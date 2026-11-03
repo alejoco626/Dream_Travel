@@ -50,10 +50,11 @@ Filename: "{app}\Calculadora_Dream_Travel.exe"; Flags: nowait skipifnotsilent
 
 [Code]
 function SetEnvironmentVariable(lpName, lpValue: String): Boolean;
-external 'SetEnvironmentVariableW@kernel32.dll stdcall';
+  external 'SetEnvironmentVariableW@kernel32.dll stdcall';
 
 function InitializeSetup(): Boolean;
 begin
-SetEnvironmentVariable('PYINSTALLER_RESET_ENVIRONMENT', '1');
-Result := True;
+  { El programa reabierto no debe heredar la carpeta temporal del anterior (error "Failed to load Python DLL"). }
+  SetEnvironmentVariable('PYINSTALLER_RESET_ENVIRONMENT', '1');
+  Result := True;
 end;
