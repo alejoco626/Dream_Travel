@@ -16,7 +16,9 @@ from .calculo import (
     calcular_presupuesto,
     dinero,
     leer_monto,
-    quetzales,
+    diferencia_por_persona,
+    formato_quetzales,
+    precios_por_persona,
     tipos_activos,
 )
 from .componentes import Ayuda, Boton
@@ -333,6 +335,7 @@ class Calculadora:
         self._tipos_visibles = None
         self._calculo_pendiente = None
         self._presupuesto = None
+        self._precios = None
         self._desglose_visible = False
 
         self._configurar_ventana()
@@ -796,8 +799,30 @@ class Calculadora:
         panel.grid(row=0, column=1, sticky="ns", padx=(px(Espacio.XS), 0))
         texto = self._texto_resumen
 
-        # Arriba, lo que más se consulta: el precio por persona.
-        texto(panel, "POR PERSONA", Tipo.CUERPO_FUERTE, Color.MARCA).pack(anchor="w")
+        # Arriba, lo que más se consulta: el precio por persona (en corinto).
+        cabeza = tk.Frame(panel, bg=Color.SUPERFICIE)
+        cabeza.pack(fill="x")
+        texto(cabeza, "POR PERSONA", Tipo.CUERPO_FUERTE, Color.MARCA).pack(side="left")
+        self.redondear = tk.BooleanVar(value=True)
+        marca = tk.Checkbutton(
+            cabeza,
+            text="Redondear",
+            variable=self.redondear,
+            command=lambda: self.calcular(silencioso=True),
+            font=Tipo.NOTA_FUERTE,
+            bg=Color.SUPERFICIE,
+            fg=Color.TEXTO_SECUNDARIO,
+            activebackground=Color.SUPERFICIE,
+            selectcolor=Color.FONDO,
+            highlightthickness=px(2),
+            highlightbackground=Color.SUPERFICIE,
+            highlightcolor=Color.MARCA,
+            bd=0,
+            cursor="hand2",
+        )
+        marca.pack(side="right")
+        Ayuda(marca, "Sube cada precio al siguiente entero si tiene centavos (301.01 → 302)")
+
         tabla = tk.Frame(panel, bg=Color.SUPERFICIE)
         tabla.pack(fill="x", pady=(px(Espacio.S), 0))
         tabla.grid_columnconfigure(1, weight=1)
@@ -813,8 +838,8 @@ class Calculadora:
             celdas = {
                 "nombre": (texto(tabla, NOMBRES_TIPO[tipo], Tipo.DATO_FUERTE, Color.TEXTO), fila, 0, "w"),
                 "cantidad": (texto(tabla, "× 0"), fila + 1, 0, "nw"),
-                "pvp": (texto(tabla, MONTO_VACIO, Tipo.CIFRA, Color.MARCA), fila, 1, "e"),
-                "descuento": (texto(tabla, MONTO_VACIO, Tipo.CIFRA, Color.MARCA), fila, 2, "e"),
+                "pvp": (texto(tabla, MONTO_VACIO, Tipo.CIFRA, Color.ACENTO), fila, 1, "e"),
+                "descuento": (texto(tabla, MONTO_VACIO, Tipo.CIFRA, Color.ACENTO), fila, 2, "e"),
                 "pvp_q": (texto(tabla, "Q 0.00"), fila + 1, 1, "e"),
                 "descuento_q": (texto(tabla, "Q 0.00"), fila + 1, 2, "e"),
                 "pvp_total": (texto(tabla, f"Total {MONTO_VACIO}"), fila + 2, 1, "e"),
@@ -830,32 +855,108 @@ class Calculadora:
                 )
             self.resumen_filas[tipo] = {clave: celda[0] for clave, celda in celdas.items()}
 
-        tk.Frame(panel, bg=Color.DIVISOR, height=1).pack(fill="x", pady=px(Espacio.L))
+        tk.Frame(panel, bg=Color.DIVISOR, height=1).pack(fill="x", pady=px(Espacio.M))
 
-        # Abajo, los totales del grupo.
+        # Totales del grupo (en azul), lado a lado para ahorrar alto.
         texto(panel, "RESUMEN", Tipo.CUERPO_FUERTE, Color.MARCA).pack(anchor="w")
-        texto(panel, "Total PVP").pack(anchor="w", pady=(px(Espacio.S), 0))
-        self.total_pvp = texto(panel, MONTO_VACIO, Tipo.CIFRA, Color.ACENTO)
-        self.total_pvp.pack(anchor="w")
-        self.total_pvp_q = texto(panel, "Q 0.00")
-        self.total_pvp_q.pack(anchor="w")
+        totales = tk.Frame(panel, bg=Color.SUPERFICIE)
+        totales.pack(fill="x", pady=(px(Espacio.XS), 0))
+        totales.grid_columnconfigure(0, weight=1)
+        totales.grid_columnconfigure(1, weight=1)
+        texto(totales, "Total PVP").grid(row=0, column=0, sticky="w")
+        texto(totales, "Con descuento · efectivo", Tipo.NOTA, Color.ACENTO).grid(
+            row=0, column=1, sticky="w", padx=separacion
+        )
+        self.total_pvp = texto(totales, MONTO_VACIO, Tipo.CIFRA, Color.MARCA)
+        self.total_pvp.grid(row=1, column=0, sticky="w")
+        self.total_descuento = texto(totales, MONTO_VACIO, Tipo.CIFRA, Color.MARCA)
+        self.total_descuento.grid(row=1, column=1, sticky="w", padx=separacion)
+        self.total_pvp_q = texto(totales, "Q 0.00")
+        self.total_pvp_q.grid(row=2, column=0, sticky="w")
+        self.total_descuento_q = texto(totales, "Q 0.00")
+        self.total_descuento_q.grid(row=2, column=1, sticky="w", padx=separacion)
 
-        cabeza = tk.Frame(panel, bg=Color.SUPERFICIE)
-        cabeza.pack(anchor="w", pady=(px(Espacio.S), 0))
-        texto(cabeza, "Total con descuento").pack(side="left")
-        texto(cabeza, "  un solo pago en efectivo", Tipo.NOTA, Color.ACENTO).pack(side="left")
-        self.total_descuento = texto(panel, MONTO_VACIO, Tipo.CIFRA, Color.ACENTO)
-        self.total_descuento.pack(anchor="w")
-        self.total_descuento_q = texto(panel, "Q 0.00")
-        self.total_descuento_q.pack(anchor="w")
+        tk.Frame(panel, bg=Color.DIVISOR, height=1).pack(fill="x", pady=px(Espacio.M))
+        self._crear_ajuste_adulto(panel)
 
         botones = tk.Frame(panel, bg=Color.SUPERFICIE)
-        botones.pack(side="bottom", fill="x", pady=(px(Espacio.L), 0))
+        botones.pack(side="bottom", fill="x", pady=(px(Espacio.M), 0))
         Boton(botones, "Calcular", self.calcular, "primario", ayuda="Ctrl + Enter").pack(
             side="left", fill="x", expand=True, padx=(0, px(6))
         )
         Boton(botones, "Limpiar", self.limpiar, "peligro").pack(
             side="left", fill="x", expand=True, padx=(px(6), 0)
+        )
+
+    def _crear_ajuste_adulto(self, panel):
+        """Compara el precio adulto calculado con otro precio y reparte la diferencia."""
+        texto = self._texto_resumen
+        texto(panel, "AJUSTE DE PRECIO ADULTO", Tipo.CUERPO_FUERTE, Color.MARCA).pack(anchor="w")
+        tabla = tk.Frame(panel, bg=Color.SUPERFICIE)
+        tabla.pack(fill="x", pady=(px(Espacio.XS), 0))
+        tabla.grid_columnconfigure(1, weight=1)
+
+        texto(tabla, "Precio adulto actual", Tipo.CUERPO, Color.TEXTO).grid(row=0, column=0, sticky="w")
+        self.ajuste_actual = texto(tabla, MONTO_VACIO, Tipo.DATO_FUERTE, Color.TEXTO)
+        self.ajuste_actual.grid(row=0, column=1, sticky="e")
+
+        texto(tabla, "Precio adulto nuevo", Tipo.CUERPO, Color.TEXTO).grid(
+            row=1, column=0, sticky="w", pady=(px(Espacio.XS), 0)
+        )
+        self.ajuste_nuevo = tk.Entry(
+            tabla,
+            font=Tipo.DATO,
+            justify="right",
+            width=11,
+            relief="flat",
+            bd=0,
+            bg=Color.FONDO,
+            fg=Color.TEXTO,
+            highlightthickness=px(2),
+            highlightbackground=Color.BORDE_CAMPO,
+            highlightcolor=Color.MARCA,
+            insertbackground=Color.MARCA,
+        )
+        self.ajuste_nuevo.grid(row=1, column=1, sticky="e", pady=(px(Espacio.XS), 0), ipady=px(2))
+        self.ajuste_nuevo.bind("<KeyPress>", preparar_edicion_monto, add="+")
+        self.ajuste_nuevo.bind("<KeyRelease>", lambda _evento: self._actualizar_ajuste(), add="+")
+        self.ajuste_nuevo.bind("<FocusOut>", self._formatear_ajuste, add="+")
+        self.ajuste_nuevo.bind("<Return>", self._formatear_ajuste)
+        self.ajuste_nuevo.bind("<KP_Enter>", self._formatear_ajuste)
+        Ayuda(self.ajuste_nuevo, "Escribe el precio por adulto que quieres ofrecer")
+
+        texto(tabla, "Diferencia por persona", Tipo.CUERPO_FUERTE, Color.TEXTO).grid(
+            row=2, column=0, sticky="w", pady=(px(Espacio.S), 0)
+        )
+        self.ajuste_por_persona = texto(tabla, "—", Tipo.CIFRA, Color.ACENTO)
+        self.ajuste_por_persona.grid(row=2, column=1, sticky="e", pady=(px(Espacio.S), 0))
+        self.ajuste_detalle = texto(tabla, "")
+        self.ajuste_detalle.grid(row=3, column=0, columnspan=2, sticky="e")
+
+    def _formatear_ajuste(self, _evento=None):
+        if self.ajuste_nuevo.get().strip():
+            formatear_monto(self.ajuste_nuevo)
+        self._actualizar_ajuste()
+        return "break"
+
+    def _actualizar_ajuste(self):
+        precios = self._precios
+        texto_nuevo = self.ajuste_nuevo.get().strip()
+        precio_actual = precios.pvp[ADULTOS] if precios else 0.0
+        self.ajuste_actual.config(text=dinero(precio_actual))
+        try:
+            precio_nuevo = leer_monto(texto_nuevo) if texto_nuevo else None
+        except ValueError:
+            precio_nuevo = None
+        if precio_nuevo is None or precios is None:
+            self.ajuste_por_persona.config(text="—")
+            self.ajuste_detalle.config(text="")
+            return
+        cantidades = self.cantidades()
+        total, por_persona = diferencia_por_persona(precio_actual, precio_nuevo, cantidades)
+        self.ajuste_por_persona.config(text=dinero(por_persona))
+        self.ajuste_detalle.config(
+            text=f"{dinero(total)} entre {sum(cantidades.values())} personas"
         )
 
     def _actualizar_filas_resumen(self):
@@ -868,22 +969,23 @@ class Calculadora:
                     widget.grid_remove()
 
     def _mostrar_resumen(self, presupuesto, cantidades):
+        precios = precios_por_persona(presupuesto, cantidades, self.redondear.get())
+        self._precios = precios
         for tipo, fila in self.resumen_filas.items():
-            pvp = presupuesto.pvp_persona[tipo]
-            descuento = presupuesto.descuento_persona[tipo]
             fila["cantidad"].config(text=f"× {cantidades[tipo]}")
-            fila["pvp"].config(text=dinero(pvp))
-            fila["pvp_q"].config(text=quetzales(pvp))
-            fila["pvp_total"].config(text=f"Total {dinero(presupuesto.subtotal_pvp[tipo])}")
-            fila["descuento"].config(text=dinero(descuento))
-            fila["descuento_q"].config(text=quetzales(descuento))
+            fila["pvp"].config(text=dinero(precios.pvp[tipo]))
+            fila["pvp_q"].config(text=formato_quetzales(precios.pvp_q[tipo]))
+            fila["pvp_total"].config(text=f"Total {dinero(precios.subtotal_pvp[tipo])}")
+            fila["descuento"].config(text=dinero(precios.descuento[tipo]))
+            fila["descuento_q"].config(text=formato_quetzales(precios.descuento_q[tipo]))
             fila["descuento_total"].config(
-                text=f"Total {dinero(presupuesto.subtotal_descuento[tipo])}"
+                text=f"Total {dinero(precios.subtotal_descuento[tipo])}"
             )
-        self.total_pvp.config(text=dinero(presupuesto.total_pvp))
-        self.total_pvp_q.config(text=quetzales(presupuesto.total_pvp))
-        self.total_descuento.config(text=dinero(presupuesto.total_descuento))
-        self.total_descuento_q.config(text=quetzales(presupuesto.total_descuento))
+        self.total_pvp.config(text=dinero(precios.total_pvp))
+        self.total_pvp_q.config(text=formato_quetzales(precios.total_pvp_q))
+        self.total_descuento.config(text=dinero(precios.total_descuento))
+        self.total_descuento_q.config(text=formato_quetzales(precios.total_descuento_q))
+        self._actualizar_ajuste()
 
     # ------------------------------------------------------------------- pie
     def _crear_pie(self):
@@ -953,6 +1055,8 @@ class Calculadora:
         for tipo, caja in self.personas.items():
             caja.delete(0, tk.END)
             caja.insert(0, "1" if tipo == ADULTOS else "0")
+        self.ajuste_nuevo.delete(0, tk.END)
+        self.redondear.set(True)
         for fila in list(self.filas):
             if fila.fijo:
                 fila.reiniciar_montos()

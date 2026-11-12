@@ -148,3 +148,68 @@ def calcular_presupuesto(servicios, cantidades):
     presupuesto.total_descuento = sum(presupuesto.subtotal_descuento.values())
     presupuesto.totales_columnas = tuple(totales)
     return presupuesto
+
+
+def redondear_arriba(valor):
+    """Sube al siguiente entero si hay centavos: 301.01 -> 302, 301.00 -> 301."""
+    centavos = round(valor * 100)
+    return float(-(-centavos // 100))
+
+
+def formato_quetzales(valor_en_quetzales):
+    return f"Q {valor_en_quetzales:,.2f}"
+
+
+@dataclass
+class PreciosPorPersona:
+    """Precios que se muestran en el panel, con o sin redondeo."""
+
+    pvp: dict = field(default_factory=dict)
+    pvp_q: dict = field(default_factory=dict)
+    descuento: dict = field(default_factory=dict)
+    descuento_q: dict = field(default_factory=dict)
+    subtotal_pvp: dict = field(default_factory=dict)
+    subtotal_descuento: dict = field(default_factory=dict)
+    total_pvp: float = 0.0
+    total_pvp_q: float = 0.0
+    total_descuento: float = 0.0
+    total_descuento_q: float = 0.0
+
+
+def precios_por_persona(presupuesto, cantidades, redondear):
+    """Con redondeo, cada precio por persona ($ y Q) sube al siguiente entero y los
+    totales se calculan a partir de esos precios redondeados."""
+    ajustar = redondear_arriba if redondear else (lambda valor: valor)
+    precios = PreciosPorPersona()
+    total_pvp_q = total_descuento_q = 0.0
+    for tipo in TIPOS_PERSONA:
+        numero = cantidades[tipo]
+        pvp = ajustar(presupuesto.pvp_persona[tipo])
+        descuento = ajustar(presupuesto.descuento_persona[tipo])
+        precios.pvp[tipo] = pvp
+        precios.descuento[tipo] = descuento
+        precios.pvp_q[tipo] = ajustar(pvp * TIPO_CAMBIO_GTQ)
+        precios.descuento_q[tipo] = ajustar(descuento * TIPO_CAMBIO_GTQ)
+        precios.subtotal_pvp[tipo] = pvp * numero
+        precios.subtotal_descuento[tipo] = descuento * numero
+        total_pvp_q += precios.pvp_q[tipo] * numero
+        total_descuento_q += precios.descuento_q[tipo] * numero
+    precios.total_pvp = sum(precios.subtotal_pvp.values())
+    precios.total_descuento = sum(precios.subtotal_descuento.values())
+    if redondear:
+        precios.total_pvp_q = total_pvp_q
+        precios.total_descuento_q = total_descuento_q
+    else:
+        precios.total_pvp_q = precios.total_pvp * TIPO_CAMBIO_GTQ
+        precios.total_descuento_q = precios.total_descuento * TIPO_CAMBIO_GTQ
+    return precios
+
+
+def diferencia_por_persona(precio_adulto, precio_nuevo, cantidades):
+    """(precio adulto - precio nuevo) x adultos, repartido entre todas las personas.
+
+    Devuelve (diferencia total, diferencia por persona).
+    """
+    total = (precio_adulto - precio_nuevo) * cantidades[ADULTOS]
+    personas = sum(cantidades.values())
+    return total, (total / personas if personas else 0.0)

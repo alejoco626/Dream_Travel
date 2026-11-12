@@ -74,6 +74,7 @@ class PruebaInterfaz(unittest.TestCase):
 
     def test_resultados_iguales_a_la_version_anterior(self):
         self.armar_escenario()
+        self.app.redondear.set(False)  # la referencia es sin redondeo
         self.app.calcular()
         self.assertEqual(self.errores, [])
         with open(REFERENCIA, encoding="utf-8") as archivo:
@@ -89,6 +90,30 @@ class PruebaInterfaz(unittest.TestCase):
         app.alternar_desglose()
         desglose = [texto(w) for w in app.tabla_desglose.winfo_children()]
         self.assertEqual(desglose, referencia["desglose"])
+
+    def test_redondeo_activo_por_defecto(self):
+        self.armar_escenario()
+        self.app.calcular()
+        self.assertTrue(self.app.redondear.get())
+        adultos = self.app.resumen_filas["ADULTOS"]
+        self.assertEqual(texto(adultos["pvp"]), "$ 1,252.00")  # real: $ 1,251.93
+        self.assertEqual(texto(adultos["pvp_total"]), "Total $ 2,504.00")
+        self.app.redondear.set(False)
+        self.app.calcular()
+        self.assertEqual(texto(adultos["pvp"]), "$ 1,251.93")
+
+    def test_ajuste_de_precio_adulto(self):
+        self.armar_escenario()
+        self.app.calcular()
+        self.assertEqual(texto(self.app.ajuste_actual), "$ 1,252.00")
+        self.assertEqual(texto(self.app.ajuste_por_persona), "—")
+        self.app.ajuste_nuevo.valor = "1,152"
+        self.app._formatear_ajuste()
+        # (1,252 - 1,152) x 2 adultos = 200, entre 4 personas = 50
+        self.assertEqual(texto(self.app.ajuste_por_persona), "$ 50.00")
+        self.assertEqual(texto(self.app.ajuste_detalle), "$ 200.00 entre 4 personas")
+        self.app.limpiar()
+        self.assertEqual(texto(self.app.ajuste_por_persona), "—")
 
     def test_miscelaneos_opcional(self):
         self.poner_personas(2, 1, 1)

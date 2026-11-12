@@ -30,6 +30,17 @@ class PruebaFormato(unittest.TestCase):
         with self.assertRaises(ValueError):
             leer_monto("abc")
 
+    def test_redondear_arriba(self):
+        from calculadora.calculo import redondear_arriba
+        self.assertEqual(redondear_arriba(301.01), 302)
+        self.assertEqual(redondear_arriba(301.00), 301)
+        self.assertEqual(redondear_arriba(301.004), 301)
+
+    def test_diferencia_por_persona(self):
+        from calculadora.calculo import diferencia_por_persona
+        cantidades = {"ADULTOS": 2, "NIÑOS": 2, "INFANTES": 1}
+        self.assertEqual(diferencia_por_persona(2045, 1900, cantidades), (290, 58.0))
+
     def test_formatos(self):
         self.assertEqual(dinero(1234.5), "$ 1,234.50")
         self.assertEqual(quetzales(1000), "Q 7,880.00")
