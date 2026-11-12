@@ -30,12 +30,6 @@ class PruebaFormato(unittest.TestCase):
         with self.assertRaises(ValueError):
             leer_monto("abc")
 
-    def test_redondear_arriba(self):
-        from calculadora.calculo import redondear_arriba
-        self.assertEqual(redondear_arriba(301.01), 302)
-        self.assertEqual(redondear_arriba(301.00), 301)
-        self.assertEqual(redondear_arriba(301.004), 301)
-
     def test_redondear_cercano(self):
         from calculadora.calculo import redondear_cercano
         self.assertEqual(redondear_cercano(50.49), 50)

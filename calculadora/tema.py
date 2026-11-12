@@ -32,7 +32,8 @@ class Color:
 
     DESACTIVADO_FONDO = "#ECEFF3"
     DESACTIVADO_TEXTO = "#6E7681"
-    EXITO = "#1E7A4C"
+    EXITO = "#1E7A4C"  # 5.6:1 sobre FONDO
+    PELIGRO = "#C62828"  # rojo de aviso, 5.6:1 sobre FONDO
 
 
 class Tipo:

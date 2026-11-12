@@ -151,12 +151,6 @@ def calcular_presupuesto(servicios, cantidades):
     return presupuesto
 
 
-def redondear_arriba(valor):
-    """Sube al siguiente entero si hay centavos: 301.01 -> 302, 301.00 -> 301."""
-    centavos = round(valor * 100)
-    return float(-(-centavos // 100))
-
-
 def formato_quetzales(valor_en_quetzales):
     return f"Q {valor_en_quetzales:,.2f}"
 
@@ -178,9 +172,9 @@ class PreciosPorPersona:
 
 
 def precios_por_persona(presupuesto, cantidades, redondear):
-    """Con redondeo, cada precio por persona ($ y Q) sube al siguiente entero y los
-    totales se calculan a partir de esos precios redondeados."""
-    ajustar = redondear_arriba if redondear else (lambda valor: valor)
+    """Con redondeo, cada precio por persona ($ y Q) va al entero más próximo (.50 sube)
+    y los totales se calculan a partir de esos precios redondeados."""
+    ajustar = redondear_cercano if redondear else (lambda valor: valor)
     precios = PreciosPorPersona()
     total_pvp_q = total_descuento_q = 0.0
     for tipo in TIPOS_PERSONA:

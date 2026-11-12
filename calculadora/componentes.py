@@ -5,11 +5,14 @@ pinta su fondo con rectángulos rectos y cuatro esquinas suavizadas (generadas c
 Pillow), lo que mantiene el redibujado rápido al cambiar el tamaño de la ventana.
 """
 
+import calendar
 import tkinter as tk
 import tkinter.font as tkfont
+from datetime import date
 
 from PIL import Image, ImageDraw, ImageTk
 
+from . import fechas
 from .tema import Color, Espacio, Radio, Tipo, px
 
 RETARDO_AYUDA_MS = 450
@@ -293,3 +296,166 @@ class Boton(tk.Canvas):
         self._exterior = color
         self.config(bg=color)
         self._pintar()
+
+
+MESES = (
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+)
+DIAS_SEMANA = ("L", "M", "M", "J", "V", "S", "D")
+
+
+class Calendario:
+    """Calendario pequeño que aparece debajo de `ancla` y entrega la fecha elegida.
+
+    Se cierra al elegir un día, con Escape o con un clic fuera de él.
+    """
+
+    def __init__(self, ancla, al_elegir, seleccionada=None):
+        self._al_elegir = al_elegir
+        self._seleccionada = seleccionada
+        self._hoy = date.today()
+        self._mes = (seleccionada or self._hoy).replace(day=1)
+
+        self.ventana = tk.Toplevel(ancla)
+        self.ventana.wm_overrideredirect(True)
+        self.ventana.configure(
+            bg=Color.FONDO, highlightthickness=1, highlightbackground=Color.BORDE_CAMPO
+        )
+        cabeza = tk.Frame(self.ventana, bg=Color.FONDO)
+        cabeza.pack(fill="x", padx=px(Espacio.S), pady=(px(Espacio.S), px(Espacio.XS)))
+        Boton(cabeza, "‹", lambda: self._mover(-1), "enlace", padx=px(8), pady=px(2)).pack(side="left")
+        Boton(cabeza, "›", lambda: self._mover(1), "enlace", padx=px(8), pady=px(2)).pack(side="right")
+        self._titulo = tk.Label(cabeza, font=Tipo.CUERPO_FUERTE, bg=Color.FONDO, fg=Color.MARCA)
+        self._titulo.pack(side="left", expand=True)
+        self._dias = tk.Frame(self.ventana, bg=Color.FONDO)
+        self._dias.pack(padx=px(Espacio.S), pady=(0, px(Espacio.S)))
+        self._dibujar()
+
+        self.ventana.update_idletasks()
+        x = ancla.winfo_rootx()
+        y = ancla.winfo_rooty() + ancla.winfo_height() + px(Espacio.XS)
+        self.ventana.wm_geometry(f"+{x}+{y}")
+        self.ventana.bind("<Escape>", lambda _evento: self.cerrar())
+        self.ventana.bind("<Button-1>", self._clic_fuera, add="+")
+        self.ventana.focus_force()
+        self.ventana.grab_set()
+
+    def _mover(self, meses):
+        total = self._mes.year * 12 + self._mes.month - 1 + meses
+        self._mes = date(total // 12, total % 12 + 1, 1)
+        self._dibujar()
+
+    def _dibujar(self):
+        for widget in self._dias.winfo_children():
+            widget.destroy()
+        self._titulo.config(text=f"{MESES[self._mes.month - 1]} {self._mes.year}")
+        for columna, dia in enumerate(DIAS_SEMANA):
+            tk.Label(
+                self._dias, text=dia, font=Tipo.NOTA_FUERTE, bg=Color.FONDO,
+                fg=Color.TEXTO_SECUNDARIO, width=3,
+            ).grid(row=0, column=columna, pady=(0, px(2)))
+        semanas = calendar.Calendar(firstweekday=0).monthdatescalendar(
+            self._mes.year, self._mes.month
+        )
+        for fila, semana in enumerate(semanas, start=1):
+            for columna, dia in enumerate(semana):
+                if dia.month != self._mes.month:
+                    continue
+                self._crear_dia(dia).grid(row=fila, column=columna, padx=1, pady=1)
+
+    def _crear_dia(self, dia):
+        elegido = dia == self._seleccionada
+        fondo = Color.MARCA if elegido else Color.FONDO
+        color = Color.FONDO if elegido else (Color.MARCA if dia == self._hoy else Color.TEXTO)
+        etiqueta = tk.Label(
+            self._dias,
+            text=str(dia.day),
+            font=Tipo.CUERPO_FUERTE if dia == self._hoy or elegido else Tipo.CUERPO,
+            bg=fondo,
+            fg=color,
+            width=3,
+            pady=px(3),
+            cursor="hand2",
+        )
+        if not elegido:
+            etiqueta.bind("<Enter>", lambda _evento: etiqueta.config(bg=Color.SUAVE))
+            etiqueta.bind("<Leave>", lambda _evento: etiqueta.config(bg=Color.FONDO))
+        etiqueta.bind("<Button-1>", lambda _evento: self._elegir(dia))
+        return etiqueta
+
+    def _elegir(self, dia):
+        self.cerrar()
+        self._al_elegir(dia)
+        return "break"
+
+    def _clic_fuera(self, evento):
+        ancho, alto = self.ventana.winfo_width(), self.ventana.winfo_height()
+        x = evento.x_root - self.ventana.winfo_rootx()
+        y = evento.y_root - self.ventana.winfo_rooty()
+        if not (0 <= x < ancho and 0 <= y < alto):
+            self.cerrar()
+
+    def cerrar(self):
+        if self.ventana.winfo_exists():
+            self.ventana.grab_release()
+            self.ventana.destroy()
+
+
+class CampoFecha(tk.Frame):
+    """Campo dd/mm/aa: pone las diagonales solo y tiene un botón de calendario."""
+
+    TECLAS_PERMITIDAS = {
+        "BackSpace", "Delete", "Left", "Right", "Home", "End", "Tab", "ISO_Left_Tab",
+        "Return", "KP_Enter",
+    }
+
+    def __init__(self, padre, al_cambiar):
+        super().__init__(padre, bg=padre.cget("bg"))
+        self._al_cambiar = al_cambiar
+        self.campo = Campo(
+            self,
+            lambda contenedor: tk.Entry(
+                contenedor, font=Tipo.DATO, justify="center", width=9,
+                bg=Color.FONDO, fg=Color.TEXTO, insertbackground=Color.MARCA,
+            ),
+        )
+        self.campo.pack(side="left")
+        self.entrada = self.campo.widget
+        self.entrada.bind("<KeyPress>", self._filtrar_tecla, add="+")
+        self.entrada.bind("<KeyRelease>", self._poner_diagonales, add="+")
+        self.boton = Boton(
+            self, "📅", self._abrir_calendario, "suave", ayuda="Elegir en el calendario",
+            fuente=Tipo.EMOJI, padx=px(8), pady=px(3),
+        )
+        self.boton.pack(side="left", padx=(px(6), 0))
+
+    def _filtrar_tecla(self, evento):
+        if evento.keysym in self.TECLAS_PERMITIDAS or evento.state & 0x4:  # Ctrl+C, Ctrl+V...
+            return None
+        if evento.char and not evento.char.isdigit():
+            return "break"
+        return None
+
+    def _poner_diagonales(self, evento=None):
+        if evento is not None and evento.keysym in ("Left", "Right", "Home", "End", "Tab"):
+            return
+        texto = self.entrada.get()
+        nuevo = fechas.con_diagonales(texto)
+        if nuevo != texto:
+            self.entrada.delete(0, tk.END)
+            self.entrada.insert(0, nuevo)
+            self.entrada.icursor(tk.END)
+        self._al_cambiar()
+
+    def _abrir_calendario(self):
+        Calendario(self, self.poner_fecha, self.fecha())
+
+    def fecha(self):
+        return fechas.leer_fecha(self.entrada.get())
+
+    def poner_fecha(self, fecha):
+        self.entrada.delete(0, tk.END)
+        if fecha is not None:
+            self.entrada.insert(0, fechas.formato_fecha(fecha))
+        self._al_cambiar()

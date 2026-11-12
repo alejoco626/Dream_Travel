@@ -126,6 +126,26 @@ class PruebaInterfaz(unittest.TestCase):
         self.app.limpiar()
         self.assertEqual(texto(self.app.ajuste_diferencia), "—")
 
+    def test_fecha_de_pago(self):
+        app = self.app
+        viaje, cancelacion = app.fechas_pago["viaje"], app.fechas_pago["cancelacion"]
+        self.assertIn("Escribe las dos fechas", texto(app.aviso_pago))
+        viaje.entrada.valor = "201226"
+        viaje._poner_diagonales()
+        self.assertEqual(viaje.entrada.valor, "20/12/26")
+        cancelacion.poner_fecha(__import__("datetime").date(2026, 10, 1))
+        self.assertEqual(texto(app.aviso_pago), "Fecha de pago: 20/11/26")
+        self.assertEqual(app.aviso_pago.kw["fg"], "#1E7A4C")
+        cancelacion.entrada.valor = "01/12/26"
+        app._actualizar_pago()
+        self.assertEqual(texto(app.aviso_pago), "Fecha de pago: 16/11/26")
+        self.assertEqual(app.aviso_pago.kw["fg"], "#C62828")
+        app.no_reembolsable.set(True)
+        app._actualizar_pago()
+        app.limpiar()
+        self.assertFalse(app.no_reembolsable.get())
+        self.assertEqual(viaje.entrada.valor, "")
+
     def test_miscelaneos_opcional(self):
         self.poner_personas(2, 1, 1)
         fila = self.app.agregar_servicio("MISCELANEOS")

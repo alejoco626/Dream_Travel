@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox, ttk
 
-from . import actualizador, captura
+from . import actualizador, captura, fechas
 from .calculo import (
     ServicioCapturado,
     calcular_presupuesto,
@@ -23,7 +23,7 @@ from .calculo import (
     redondear_cercano,
     tipos_activos,
 )
-from .componentes import Ayuda, Boton, Campo, Tarjeta
+from .componentes import Ayuda, Boton, Campo, CampoFecha, Tarjeta
 from .config import (
     ADULTOS,
     CLAVE_ADULTOS,
@@ -153,7 +153,9 @@ class FilaServicio:
         self.subtipo = None
         self.boton_quitar = None
         self._columnas = []
-        self._fondos = []
+        # Franja detrás de toda la fila: así el color cubre también las columnas ocultas.
+        self._franja = tk.Frame(app.grid_servicios, bg=self.color)
+        self._fondos = [self._franja]
         self._construir(app.grid_servicios)
 
     # -- construcción -------------------------------------------------------
@@ -298,6 +300,7 @@ class FilaServicio:
     # -- presentación ---------------------------------------------------------
     def ubicar(self, fila_grid, color):
         self.color = color
+        self._franja.grid(row=fila_grid, column=0, columnspan=5, sticky="nsew")
         for columna, celda in enumerate(self._columnas):
             celda.grid(row=fila_grid, column=columna, sticky="nsew")
         self.pintar()
@@ -323,6 +326,7 @@ class FilaServicio:
                 self.cajas[clave].habilitar(self.incluye(tipo))
 
     def destruir(self):
+        self._franja.destroy()
         for celda in self._columnas:
             celda.destroy()
 
@@ -348,6 +352,7 @@ class Calculadora:
         self._crear_cuerpo()
         self._crear_personas()
         self._crear_servicios()
+        self._crear_condiciones_pago()
         self._crear_desglose()
         self._crear_resumen()
         self._crear_pie()
@@ -718,6 +723,74 @@ class Calculadora:
         siguiente.selection_range(0, tk.END)
         return "break"
 
+    # ----------------------------------------------------- condiciones de pago
+    def _crear_condiciones_pago(self):
+        seccion = self._crear_seccion("CONDICIONES DE PAGO")
+        self.no_reembolsable = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            seccion,
+            text="No reembolsable",
+            variable=self.no_reembolsable,
+            command=self._actualizar_pago,
+            font=Tipo.CUERPO_FUERTE,
+            bg=Color.FONDO,
+            fg=Color.TEXTO,
+            activebackground=Color.FONDO,
+            selectcolor=Color.FONDO,
+            highlightthickness=px(2),
+            highlightbackground=Color.FONDO,
+            highlightcolor=Color.MARCA,
+            bd=0,
+            cursor="hand2",
+        ).pack(anchor="w")
+
+        self.bloque_fechas = tk.Frame(seccion, bg=Color.FONDO)
+        self.bloque_fechas.pack(fill="x", pady=(px(Espacio.M), 0))
+        self.fechas_pago = {}
+        for columna, (clave, texto) in enumerate(
+            (("viaje", "Fecha de viaje"), ("cancelacion", "Fecha de cancelación del hotel"))
+        ):
+            tk.Label(
+                self.bloque_fechas, text=texto, font=Tipo.CUERPO_FUERTE,
+                bg=Color.FONDO, fg=Color.TEXTO,
+            ).grid(row=0, column=columna, sticky="w", padx=(0, px(Espacio.XL)))
+            campo = CampoFecha(self.bloque_fechas, self._actualizar_pago)
+            campo.grid(row=1, column=columna, sticky="w", padx=(0, px(Espacio.XL)), pady=(px(Espacio.XS), 0))
+            self.fechas_pago[clave] = campo
+        tk.Label(
+            self.bloque_fechas, text="dd/mm/aa", font=Tipo.NOTA,
+            bg=Color.FONDO, fg=Color.TEXTO_SECUNDARIO,
+        ).grid(row=1, column=2, sticky="w")
+        self.aviso_pago = tk.Label(
+            self.bloque_fechas, font=Tipo.CIFRA, bg=Color.FONDO, anchor="w", justify="left"
+        )
+        self.aviso_pago.grid(row=2, column=0, columnspan=3, sticky="w", pady=(px(Espacio.M), 0))
+        self._actualizar_pago()
+
+    def _actualizar_pago(self):
+        """Fecha de pago: un mes antes del viaje si hay más de un mes entre la cancelación
+        del hotel y el viaje (verde); si no, 15 días antes de la cancelación (rojo)."""
+        if self.no_reembolsable.get():
+            self.bloque_fechas.pack_forget()
+            self.actualizar_scroll()
+            return
+        self.bloque_fechas.pack(fill="x", pady=(px(Espacio.M), 0))
+        viaje = self.fechas_pago["viaje"].fecha()
+        cancelacion = self.fechas_pago["cancelacion"].fecha()
+        if viaje is None or cancelacion is None:
+            self.aviso_pago.config(
+                text="Escribe las dos fechas para ver la fecha de pago.",
+                font=Tipo.NOTA, fg=Color.TEXTO_SECUNDARIO,
+            )
+        else:
+            pago, holgada = fechas.fecha_de_pago(viaje, cancelacion)
+            self.aviso_pago.config(
+                text=f"Fecha de pago: {fechas.formato_fecha(pago)}",
+                font=Tipo.CIFRA,
+                fg=Color.EXITO if holgada else Color.PELIGRO,
+            )
+        self.actualizar_scroll()
+
     # -------------------------------------------------------------- desglose
     def _crear_desglose(self):
         seccion = self._crear_seccion("DESGLOSE")
@@ -855,7 +928,7 @@ class Calculadora:
             cursor="hand2",
         )
         marca.pack(side="right")
-        Ayuda(marca, "Sube cada precio al siguiente entero si tiene centavos (301.01 → 302)")
+        Ayuda(marca, "Redondea cada precio al entero más próximo (50.49 → 50, 50.50 → 51)")
 
         tabla = tk.Frame(panel, bg=Color.FONDO)
         tabla.pack(fill="x", pady=(px(Espacio.S), 0))
@@ -1081,6 +1154,9 @@ class Calculadora:
             caja.insert(0, "1" if tipo == ADULTOS else "0")
         self.ajuste_nuevo.delete(0, tk.END)
         self.redondear.set(True)
+        self.no_reembolsable.set(False)
+        for campo in self.fechas_pago.values():
+            campo.poner_fecha(None)
         for fila in list(self.filas):
             if fila.fijo:
                 fila.reiniciar_montos()
