@@ -5,6 +5,7 @@ import os
 import queue
 import sys
 import threading
+import traceback
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -1184,8 +1185,37 @@ class Calculadora:
         self.raiz.after(SONDEO_MS, revisar)
 
 
+ARCHIVO_ERRORES = os.path.join(
+    os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "DreamTravel", "calculadora_error.log"
+)
+
+
+def registrar_error(texto):
+    """Guarda el error para poder diagnosticarlo (el .exe no tiene consola)."""
+    try:
+        os.makedirs(os.path.dirname(ARCHIVO_ERRORES), exist_ok=True)
+        with open(ARCHIVO_ERRORES, "a", encoding="utf-8") as archivo:
+            archivo.write(f"--- {datetime.now():%Y-%m-%d %H:%M:%S} · versión {VERSION_APP}\n{texto}\n")
+    except OSError:
+        pass
+
+
 def main():
     activar_dpi()
-    raiz = tk.Tk()
-    Calculadora(raiz)
+    try:
+        raiz = tk.Tk()
+        raiz.report_callback_exception = lambda *error: registrar_error(
+            "".join(traceback.format_exception(*error))
+        )
+        Calculadora(raiz)
+    except Exception:
+        detalle = traceback.format_exc()
+        registrar_error(detalle)
+        messagebox.showerror(
+            "Calculadora",
+            f"La calculadora no pudo iniciar.\nEl detalle quedó en:\n{ARCHIVO_ERRORES}",
+        )
+        raise
+    if os.environ.get("CALCULADORA_PRUEBA_ARRANQUE"):
+        raiz.after(4000, raiz.destroy)  # usado por el workflow para probar que el .exe abre
     raiz.mainloop()

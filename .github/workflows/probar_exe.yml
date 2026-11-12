@@ -1,0 +1,40 @@
+name: Probar que el exe abre
+
+on:
+  push:
+    branches: ["diagnostico", "main"]
+
+jobs:
+  probar:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Compilar el programa
+        run: >
+          pyinstaller --onefile --windowed --clean
+          --name Calculadora_Dream_Travel
+          --icon Logo_Ovalado.ico
+          --add-data "Logo_Ovalado.ico;."
+          --add-data "Logo_Letras_Blanco.png;."
+          --hidden-import win32clipboard
+          calculadora_dream_travel.py
+
+      - name: Abrir el exe y revisar que no falle
+        run: |
+          $env:CALCULADORA_PRUEBA_ARRANQUE = "1"
+          $registro = Join-Path $env:LOCALAPPDATA "DreamTravel\calculadora_error.log"
+          Remove-Item $registro -ErrorAction SilentlyContinue
+          $proceso = Start-Process dist\Calculadora_Dream_Travel.exe -PassThru
+          if (-not $proceso.WaitForExit(60000)) { $proceso.Kill(); Write-Host "No cerró a tiempo (posible diálogo de error)" }
+          Write-Host "Código de salida: $($proceso.ExitCode)"
+          if (Test-Path $registro) { Get-Content $registro; exit 1 }
+          if ($proceso.ExitCode -ne 0) { exit 1 }
+          Write-Host "El programa abrió y cerró correctamente."
