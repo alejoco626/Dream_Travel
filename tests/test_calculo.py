@@ -36,10 +36,16 @@ class PruebaFormato(unittest.TestCase):
         self.assertEqual(redondear_arriba(301.00), 301)
         self.assertEqual(redondear_arriba(301.004), 301)
 
-    def test_diferencia_por_persona(self):
-        from calculadora.calculo import diferencia_por_persona
+    def test_redondear_cercano(self):
+        from calculadora.calculo import redondear_cercano
+        self.assertEqual(redondear_cercano(50.49), 50)
+        self.assertEqual(redondear_cercano(50.50), 51)
+        self.assertEqual(redondear_cercano(-50.50), -51)
+
+    def test_diferencia_total(self):
+        from calculadora.calculo import diferencia_total
         cantidades = {"ADULTOS": 2, "NIÑOS": 2, "INFANTES": 1}
-        self.assertEqual(diferencia_por_persona(2045, 1900, cantidades), (290, 58.0))
+        self.assertEqual(diferencia_total(2045, 1900.25, cantidades), 289.5)
 
     def test_formatos(self):
         self.assertEqual(dinero(1234.5), "$ 1,234.50")

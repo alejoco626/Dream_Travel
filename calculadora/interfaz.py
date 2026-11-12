@@ -16,12 +16,13 @@ from .calculo import (
     calcular_presupuesto,
     dinero,
     leer_monto,
-    diferencia_por_persona,
+    diferencia_total,
     formato_quetzales,
     precios_por_persona,
+    redondear_cercano,
     tipos_activos,
 )
-from .componentes import Ayuda, Boton
+from .componentes import Ayuda, Boton, Campo, Tarjeta
 from .config import (
     ADULTOS,
     CLAVE_ADULTOS,
@@ -114,6 +115,20 @@ def formatear_monto(campo):
     campo.insert(0, dinero(valor))
 
 
+def crear_entrada_monto(contenedor, ancho=11):
+    return tk.Entry(
+        contenedor,
+        font=Tipo.DATO,
+        justify="right",
+        width=ancho,
+        bg=Color.FONDO,
+        fg=Color.TEXTO,
+        insertbackground=Color.MARCA,
+        disabledbackground=Color.DESACTIVADO_FONDO,
+        disabledforeground=Color.DESACTIVADO_TEXTO,
+    )
+
+
 class CampoInvalido(ValueError):
     def __init__(self, campo):
         super().__init__("monto no válido")
@@ -132,6 +147,7 @@ class FilaServicio:
         self.color = Color.FONDO
         self.celdas = {}
         self.entradas = {}
+        self.cajas = {}  # clave -> Campo (borde redondeado alrededor de la entrada)
         self.marcas = {}  # tipo de persona -> (BooleanVar, Checkbutton), solo Misceláneos
         self.subtipo = None
         self.boton_quitar = None
@@ -170,7 +186,7 @@ class FilaServicio:
             tipo = TIPO_DE_CLAVE.get(clave)
             if self.base == SERVICIO_MISCELANEOS and tipo:
                 self._crear_marca(celda, tipo)
-            self._crear_entrada(celda, clave).pack(side="right", ipady=px(Espacio.XS))
+            self._crear_entrada(celda, clave).pack(side="right")
 
         celda = self._celda(grid, px(Espacio.XS))
         if not self.fijo:
@@ -209,22 +225,8 @@ class FilaServicio:
         self.marcas[tipo] = (variable, marca)
 
     def _crear_entrada(self, celda, clave):
-        entrada = tk.Entry(
-            celda,
-            font=Tipo.DATO,
-            justify="right",
-            width=11,
-            relief="flat",
-            bd=0,
-            bg=Color.FONDO,
-            fg=Color.TEXTO,
-            highlightthickness=px(2),
-            highlightbackground=Color.BORDE_CAMPO,
-            highlightcolor=Color.MARCA,
-            insertbackground=Color.MARCA,
-            disabledbackground=Color.DESACTIVADO_FONDO,
-            disabledforeground=Color.DESACTIVADO_TEXTO,
-        )
+        caja = Campo(celda, crear_entrada_monto)
+        entrada = caja.widget
         entrada.insert(0, MONTO_VACIO)
         entrada.bind("<KeyPress>", preparar_edicion_monto, add="+")
         entrada.bind("<KeyRelease>", self.app.programar_calculo, add="+")
@@ -234,7 +236,8 @@ class FilaServicio:
         entrada.bind("<KP_Enter>", self.app.siguiente_campo)
         Ayuda(entrada, lambda: descripcion_grupo(clave, self.incluye(NINOS)))
         self.entradas[clave] = entrada
-        return entrada
+        self.cajas[clave] = caja
+        return caja
 
     def _al_enfocar(self, evento, clave):
         self.app.resaltar(self, clave)
@@ -286,8 +289,8 @@ class FilaServicio:
         return ServicioCapturado(self.nombre(), self.proporcion, self.modo, montos, incluidos)
 
     def reiniciar_montos(self):
-        for entrada in self.entradas.values():
-            entrada.config(state="normal")
+        for clave, entrada in self.entradas.items():
+            self.cajas[clave].habilitar(True)
             entrada.delete(0, tk.END)
             entrada.insert(0, MONTO_VACIO)
 
@@ -304,6 +307,8 @@ class FilaServicio:
             widget.config(bg=color)
         for _, marca in self.marcas.values():
             marca.config(activebackground=color, highlightbackground=color)
+        for caja in self.cajas.values():
+            caja.cambiar_fondo(color)
         if self.boton_quitar is not None:
             self.boton_quitar.cambiar_fondo(color)
 
@@ -314,8 +319,7 @@ class FilaServicio:
             else:
                 self.celdas[clave].grid_remove()
             if tipo in self.marcas:
-                estado = "normal" if self.incluye(tipo) else "disabled"
-                self.entradas[clave].config(state=estado)
+                self.cajas[clave].habilitar(self.incluye(tipo))
 
     def destruir(self):
         for celda in self._columnas:
@@ -363,7 +367,37 @@ class Calculadora:
         raiz = self.raiz
         raiz.iconbitmap(ruta_recurso("Logo_Ovalado.ico"))
         raiz.title("Dream & Travel - Calculadora")
-        raiz.configure(bg=Color.FONDO)
+        raiz.configure(bg=Color.LIENZO)
+        estilo = ttk.Style(raiz)
+        estilo.theme_use("clam")
+        estilo.configure(
+            "TCombobox",
+            fieldbackground=Color.FONDO,
+            background=Color.FONDO,
+            bordercolor=Color.BORDE_CAMPO,
+            lightcolor=Color.FONDO,
+            darkcolor=Color.FONDO,
+            arrowcolor=Color.TEXTO_SECUNDARIO,
+            padding=px(4),
+        )
+        estilo.map(
+            "TCombobox",
+            bordercolor=[("focus", Color.MARCA)],
+            fieldbackground=[("readonly", Color.FONDO)],
+            selectbackground=[("readonly", Color.FONDO)],
+            selectforeground=[("readonly", Color.TEXTO)],
+        )
+        for orientacion in ("Vertical", "Horizontal"):
+            estilo.configure(
+                f"{orientacion}.TScrollbar",
+                background=Color.DIVISOR,
+                troughcolor=Color.LIENZO,
+                bordercolor=Color.LIENZO,
+                lightcolor=Color.DIVISOR,
+                darkcolor=Color.DIVISOR,
+                arrowcolor=Color.TEXTO_SECUNDARIO,
+                gripcount=0,
+            )
         ancho = min(px(1280), raiz.winfo_screenwidth() - px(40))
         alto = min(px(800), raiz.winfo_screenheight() - px(80))
         raiz.geometry(f"{ancho}x{alto}")
@@ -398,18 +432,18 @@ class Calculadora:
         self.raiz.after(hasta_el_minuto + 50, self._actualizar_reloj)
 
     def _crear_cuerpo(self):
-        self.contenedor = tk.Frame(self.raiz, bg=Color.FONDO)
+        self.contenedor = tk.Frame(self.raiz, bg=Color.LIENZO)
         self.contenedor.pack(
             fill="both", expand=True, padx=px(Espacio.XL), pady=(px(Espacio.M), px(Espacio.S))
         )
         self.contenedor.grid_columnconfigure(0, weight=1)
         self.contenedor.grid_rowconfigure(0, weight=1)
 
-        zona = tk.Frame(self.contenedor, bg=Color.FONDO)
+        zona = tk.Frame(self.contenedor, bg=Color.LIENZO)
         zona.grid(row=0, column=0, sticky="nsew")
-        self.lienzo = tk.Canvas(zona, bg=Color.FONDO, highlightthickness=0)
-        barra_vertical = tk.Scrollbar(zona, orient="vertical", command=self.lienzo.yview)
-        self.barra_horizontal = tk.Scrollbar(
+        self.lienzo = tk.Canvas(zona, bg=Color.LIENZO, highlightthickness=0)
+        barra_vertical = ttk.Scrollbar(zona, orient="vertical", command=self.lienzo.yview)
+        self.barra_horizontal = ttk.Scrollbar(
             zona, orient="horizontal", command=self.lienzo.xview
         )
         barra_vertical.pack(side="right", fill="y")
@@ -418,7 +452,7 @@ class Calculadora:
             yscrollcommand=barra_vertical.set, xscrollcommand=self.barra_horizontal.set
         )
 
-        self.pagina = tk.Frame(self.lienzo, bg=Color.FONDO)
+        self.pagina = tk.Frame(self.lienzo, bg=Color.LIENZO)
         self._ventana_pagina = self.lienzo.create_window((0, 0), window=self.pagina, anchor="nw")
         self.lienzo.bind("<Configure>", self._ajustar_ancho_pagina)
         self.pagina.bind("<Configure>", self.actualizar_scroll)
@@ -449,58 +483,57 @@ class Calculadora:
         self.lienzo.configure(scrollregion=self.lienzo.bbox("all"))
 
     def _crear_seccion(self, titulo, nota=None):
-        seccion = tk.Frame(self.pagina, bg=Color.SUPERFICIE, padx=px(Espacio.L), pady=px(Espacio.M))
-        seccion.pack(fill="x", pady=(0, px(Espacio.M)), padx=(0, px(Espacio.M)))
-        cabeza = tk.Frame(seccion, bg=Color.SUPERFICIE)
+        tarjeta = Tarjeta(self.pagina, padx=px(Espacio.L + 4), pady=px(Espacio.L))
+        tarjeta.pack(fill="x", pady=(0, px(Espacio.M)), padx=(0, px(Espacio.M)))
+        seccion = tarjeta.interior
+        cabeza = tk.Frame(seccion, bg=Color.FONDO)
         cabeza.pack(fill="x", pady=(0, px(Espacio.S)))
         tk.Label(
-            cabeza, text=titulo, font=Tipo.CUERPO_FUERTE, bg=Color.SUPERFICIE, fg=Color.MARCA
+            cabeza, text=titulo, font=Tipo.CUERPO_FUERTE, bg=Color.FONDO, fg=Color.MARCA
         ).pack(side="left")
         if nota:
             tk.Label(
-                cabeza, text=nota, font=Tipo.NOTA, bg=Color.SUPERFICIE, fg=Color.TEXTO_SECUNDARIO
+                cabeza, text=nota, font=Tipo.NOTA, bg=Color.FONDO, fg=Color.TEXTO_SECUNDARIO
             ).pack(side="left", padx=(px(Espacio.M), 0))
         return seccion
 
     # -------------------------------------------------------------- personas
     def _crear_personas(self):
-        fila = tk.Frame(self._crear_seccion("PERSONAS"), bg=Color.SUPERFICIE)
+        fila = tk.Frame(self._crear_seccion("PERSONAS"), bg=Color.FONDO)
         fila.pack(fill="x")
         validar = self.raiz.register(lambda texto: texto == "" or (texto.isdigit() and len(texto) <= 2))
         for columna, tipo in enumerate(TIPOS_PERSONA):
-            bloque = tk.Frame(fila, bg=Color.SUPERFICIE)
+            bloque = tk.Frame(fila, bg=Color.FONDO)
             bloque.grid(row=0, column=columna, sticky="w", padx=(0, px(36)))
             tk.Label(
                 bloque, text=NOMBRES_TIPO[tipo], font=Tipo.DATO_FUERTE,
-                bg=Color.SUPERFICIE, fg=Color.TEXTO,
+                bg=Color.FONDO, fg=Color.TEXTO,
             ).grid(row=0, column=0, sticky="w")
             tk.Label(
                 bloque, text=EDADES_TIPO[tipo], font=Tipo.NOTA,
-                bg=Color.SUPERFICIE, fg=Color.TEXTO_SECUNDARIO,
+                bg=Color.FONDO, fg=Color.TEXTO_SECUNDARIO,
             ).grid(row=1, column=0, sticky="w")
-            caja = tk.Spinbox(
+            contenedor = Campo(
                 bloque,
-                from_=0,
-                to=99,
-                width=4,
-                font=Tipo.DATO_FUERTE,
-                justify="center",
-                relief="flat",
-                bd=0,
-                bg=Color.FONDO,
-                fg=Color.TEXTO,
-                buttonbackground=Color.SUPERFICIE,
-                highlightthickness=px(2),
-                highlightbackground=Color.BORDE_CAMPO,
-                highlightcolor=Color.MARCA,
-                insertbackground=Color.MARCA,
-                validate="key",
-                validatecommand=(validar, "%P"),
-                command=self.al_cambiar_personas,
+                lambda padre: tk.Spinbox(
+                    padre,
+                    from_=0,
+                    to=99,
+                    width=4,
+                    font=Tipo.DATO_FUERTE,
+                    justify="center",
+                    bg=Color.FONDO,
+                    fg=Color.TEXTO,
+                    insertbackground=Color.MARCA,
+                    validate="key",
+                    validatecommand=(validar, "%P"),
+                    command=self.al_cambiar_personas,
+                ),
             )
+            caja = contenedor.widget
             caja.delete(0, tk.END)
             caja.insert(0, "1" if tipo == ADULTOS else "0")
-            caja.grid(row=0, column=1, rowspan=2, padx=(px(Espacio.M), 0))
+            contenedor.grid(row=0, column=1, rowspan=2, padx=(px(Espacio.M), 0))
             caja.bind("<KeyRelease>", self.al_cambiar_personas, add="+")
             caja.bind("<FocusIn>", lambda evento: evento.widget.selection_range(0, tk.END), add="+")
             caja.bind("<Return>", self.siguiente_campo)
@@ -537,7 +570,7 @@ class Calculadora:
             "Escribe el monto total de cada grupo · Diseñador: precio por persona"
             " · En Misceláneos marca ☑ para incluir niños o infantes",
         )
-        self.grid_servicios = tk.Frame(seccion, bg=Color.SUPERFICIE)
+        self.grid_servicios = tk.Frame(seccion, bg=Color.FONDO)
         self.grid_servicios.pack(fill="x")
         self.grid_servicios.grid_columnconfigure(0, weight=1, minsize=px(200))
         for columna in (1, 2, 3):
@@ -555,7 +588,7 @@ class Calculadora:
                 self.grid_servicios,
                 text=texto,
                 font=Tipo.NOTA_FUERTE,
-                bg=Color.SUPERFICIE,
+                bg=Color.FONDO,
                 fg=Color.TEXTO_SECUNDARIO,
                 anchor=ancla,
                 padx=px(Espacio.M),
@@ -601,19 +634,17 @@ class Calculadora:
         for clave_encabezado, etiqueta in self.encabezados_servicios.items():
             activa = clave_encabezado == clave
             etiqueta.config(
-                bg=Color.RESALTE if activa else Color.SUPERFICIE,
+                bg=Color.RESALTE if activa else Color.FONDO,
                 fg=Color.MARCA if activa else Color.TEXTO_SECUNDARIO,
             )
-        fila.entradas[clave].config(bg=Color.FOCO_CAMPO)
 
     def quitar_resalte(self, fila, clave):
-        fila.entradas[clave].config(bg=Color.FONDO)
         if self.fila_enfocada is fila:
             self.fila_enfocada = None
             if fila in self.filas:
                 fila.pintar()
         for etiqueta in self.encabezados_servicios.values():
-            etiqueta.config(bg=Color.SUPERFICIE, fg=Color.TEXTO_SECUNDARIO)
+            etiqueta.config(bg=Color.FONDO, fg=Color.TEXTO_SECUNDARIO)
 
     def al_cambiar_inclusion(self, fila):
         fila.actualizar_columnas(self.tipos_activos())
@@ -706,11 +737,11 @@ class Calculadora:
     def alternar_desglose(self):
         self._desglose_visible = not self._desglose_visible
         if self._desglose_visible:
-            self.boton_desglose.config(text="▾  Ocultar desglose")
+            self.boton_desglose.cambiar_texto("▾  Ocultar desglose")
             self._construir_desglose()
             self.tabla_desglose.pack(fill="x", pady=(px(Espacio.S), 0))
         else:
-            self.boton_desglose.config(text="▸  Ver desglose")
+            self.boton_desglose.cambiar_texto("▸  Ver desglose")
             self.tabla_desglose.pack_forget()
         self.actualizar_scroll()
 
@@ -788,19 +819,21 @@ class Calculadora:
     # --------------------------------------------------------------- resumen
     def _texto_resumen(self, padre, texto, fuente=Tipo.NOTA, color=Color.TEXTO_SECUNDARIO):
         return tk.Label(
-            padre, text=texto, font=fuente, bg=Color.SUPERFICIE, fg=color,
+            padre, text=texto, font=fuente, bg=Color.FONDO, fg=color,
             anchor="w", justify="left",
         )
 
     def _crear_resumen(self):
-        panel = tk.Frame(
-            self.contenedor, bg=Color.SUPERFICIE, padx=px(Espacio.XL), pady=px(Espacio.L)
+        tarjeta = Tarjeta(
+            self.contenedor, padx=px(Espacio.XL), pady=px(Espacio.L),
+            estirar_ancho=False, estirar_alto=True,
         )
-        panel.grid(row=0, column=1, sticky="ns", padx=(px(Espacio.XS), 0))
+        tarjeta.grid(row=0, column=1, sticky="ns", padx=(px(Espacio.XS), 0))
+        panel = tarjeta.interior
         texto = self._texto_resumen
 
         # Arriba, lo que más se consulta: el precio por persona (en corinto).
-        cabeza = tk.Frame(panel, bg=Color.SUPERFICIE)
+        cabeza = tk.Frame(panel, bg=Color.FONDO)
         cabeza.pack(fill="x")
         texto(cabeza, "POR PERSONA", Tipo.CUERPO_FUERTE, Color.MARCA).pack(side="left")
         self.redondear = tk.BooleanVar(value=True)
@@ -810,12 +843,12 @@ class Calculadora:
             variable=self.redondear,
             command=lambda: self.calcular(silencioso=True),
             font=Tipo.NOTA_FUERTE,
-            bg=Color.SUPERFICIE,
+            bg=Color.FONDO,
             fg=Color.TEXTO_SECUNDARIO,
-            activebackground=Color.SUPERFICIE,
+            activebackground=Color.FONDO,
             selectcolor=Color.FONDO,
             highlightthickness=px(2),
-            highlightbackground=Color.SUPERFICIE,
+            highlightbackground=Color.FONDO,
             highlightcolor=Color.MARCA,
             bd=0,
             cursor="hand2",
@@ -823,7 +856,7 @@ class Calculadora:
         marca.pack(side="right")
         Ayuda(marca, "Sube cada precio al siguiente entero si tiene centavos (301.01 → 302)")
 
-        tabla = tk.Frame(panel, bg=Color.SUPERFICIE)
+        tabla = tk.Frame(panel, bg=Color.FONDO)
         tabla.pack(fill="x", pady=(px(Espacio.S), 0))
         tabla.grid_columnconfigure(1, weight=1)
         tabla.grid_columnconfigure(2, weight=1)
@@ -859,7 +892,7 @@ class Calculadora:
 
         # Totales del grupo (en azul), lado a lado para ahorrar alto.
         texto(panel, "RESUMEN", Tipo.CUERPO_FUERTE, Color.MARCA).pack(anchor="w")
-        totales = tk.Frame(panel, bg=Color.SUPERFICIE)
+        totales = tk.Frame(panel, bg=Color.FONDO)
         totales.pack(fill="x", pady=(px(Espacio.XS), 0))
         totales.grid_columnconfigure(0, weight=1)
         totales.grid_columnconfigure(1, weight=1)
@@ -879,7 +912,7 @@ class Calculadora:
         tk.Frame(panel, bg=Color.DIVISOR, height=1).pack(fill="x", pady=px(Espacio.M))
         self._crear_ajuste_adulto(panel)
 
-        botones = tk.Frame(panel, bg=Color.SUPERFICIE)
+        botones = tk.Frame(panel, bg=Color.FONDO)
         botones.pack(side="bottom", fill="x", pady=(px(Espacio.M), 0))
         Boton(botones, "Calcular", self.calcular, "primario", ayuda="Ctrl + Enter").pack(
             side="left", fill="x", expand=True, padx=(0, px(6))
@@ -889,10 +922,10 @@ class Calculadora:
         )
 
     def _crear_ajuste_adulto(self, panel):
-        """Compara el precio adulto calculado con otro precio y reparte la diferencia."""
+        """Compara el precio adulto calculado con otro precio y muestra la diferencia total."""
         texto = self._texto_resumen
         texto(panel, "AJUSTE DE PRECIO ADULTO", Tipo.CUERPO_FUERTE, Color.MARCA).pack(anchor="w")
-        tabla = tk.Frame(panel, bg=Color.SUPERFICIE)
+        tabla = tk.Frame(panel, bg=Color.FONDO)
         tabla.pack(fill="x", pady=(px(Espacio.XS), 0))
         tabla.grid_columnconfigure(1, weight=1)
 
@@ -903,21 +936,9 @@ class Calculadora:
         texto(tabla, "Precio adulto nuevo", Tipo.CUERPO, Color.TEXTO).grid(
             row=1, column=0, sticky="w", pady=(px(Espacio.XS), 0)
         )
-        self.ajuste_nuevo = tk.Entry(
-            tabla,
-            font=Tipo.DATO,
-            justify="right",
-            width=11,
-            relief="flat",
-            bd=0,
-            bg=Color.FONDO,
-            fg=Color.TEXTO,
-            highlightthickness=px(2),
-            highlightbackground=Color.BORDE_CAMPO,
-            highlightcolor=Color.MARCA,
-            insertbackground=Color.MARCA,
-        )
-        self.ajuste_nuevo.grid(row=1, column=1, sticky="e", pady=(px(Espacio.XS), 0), ipady=px(2))
+        campo = Campo(tabla, crear_entrada_monto)
+        campo.grid(row=1, column=1, sticky="e", pady=(px(Espacio.XS), 0))
+        self.ajuste_nuevo = campo.widget
         self.ajuste_nuevo.bind("<KeyPress>", preparar_edicion_monto, add="+")
         self.ajuste_nuevo.bind("<KeyRelease>", lambda _evento: self._actualizar_ajuste(), add="+")
         self.ajuste_nuevo.bind("<FocusOut>", self._formatear_ajuste, add="+")
@@ -925,11 +946,11 @@ class Calculadora:
         self.ajuste_nuevo.bind("<KP_Enter>", self._formatear_ajuste)
         Ayuda(self.ajuste_nuevo, "Escribe el precio por adulto que quieres ofrecer")
 
-        texto(tabla, "Diferencia por persona", Tipo.CUERPO_FUERTE, Color.TEXTO).grid(
+        texto(tabla, "Diferencia total", Tipo.CUERPO_FUERTE, Color.TEXTO).grid(
             row=2, column=0, sticky="w", pady=(px(Espacio.S), 0)
         )
-        self.ajuste_por_persona = texto(tabla, "—", Tipo.CIFRA, Color.ACENTO)
-        self.ajuste_por_persona.grid(row=2, column=1, sticky="e", pady=(px(Espacio.S), 0))
+        self.ajuste_diferencia = texto(tabla, "—", Tipo.CIFRA, Color.ACENTO)
+        self.ajuste_diferencia.grid(row=2, column=1, sticky="e", pady=(px(Espacio.S), 0))
         self.ajuste_detalle = texto(tabla, "")
         self.ajuste_detalle.grid(row=3, column=0, columnspan=2, sticky="e")
 
@@ -949,14 +970,16 @@ class Calculadora:
         except ValueError:
             precio_nuevo = None
         if precio_nuevo is None or precios is None:
-            self.ajuste_por_persona.config(text="—")
+            self.ajuste_diferencia.config(text="—")
             self.ajuste_detalle.config(text="")
             return
-        cantidades = self.cantidades()
-        total, por_persona = diferencia_por_persona(precio_actual, precio_nuevo, cantidades)
-        self.ajuste_por_persona.config(text=dinero(por_persona))
+        adultos = self.cantidad(ADULTOS)
+        diferencia = diferencia_total(precio_actual, precio_nuevo, self.cantidades())
+        if self.redondear.get():
+            diferencia = redondear_cercano(diferencia)
+        self.ajuste_diferencia.config(text=dinero(diferencia))
         self.ajuste_detalle.config(
-            text=f"{dinero(total)} entre {sum(cantidades.values())} personas"
+            text=f"({dinero(precio_actual)} − {dinero(precio_nuevo)}) × {adultos} adultos"
         )
 
     def _actualizar_filas_resumen(self):
@@ -994,7 +1017,7 @@ class Calculadora:
             text="Los datos ingresados son temporales y no se almacenan permanentemente."
             f"  ·  Versión {VERSION_APP}",
             font=Tipo.NOTA,
-            bg=Color.FONDO,
+            bg=Color.LIENZO,
             fg=Color.TEXTO_SECUNDARIO,
         ).pack(pady=(0, px(Espacio.S)))
         self.boton_captura = Boton(
@@ -1011,7 +1034,7 @@ class Calculadora:
 
     def _ubicar_boton_captura(self):
         self.boton_captura.place(relx=1.0, rely=1.0, x=-px(Espacio.XS), y=-px(Espacio.XS), anchor="se")
-        self.boton_captura.lift()
+        tk.Misc.tkraise(self.boton_captura)  # Canvas.lift mueve figuras, no el widget
 
     # --------------------------------------------------------------- cálculo
     def programar_calculo(self, _evento=None):
@@ -1086,10 +1109,10 @@ class Calculadora:
             messagebox.showerror("Captura", f"No se pudo capturar la pantalla.\n{error}")
         self._ubicar_boton_captura()
         if exito:
-            self.boton_captura.config(text="✔", fg=Color.EXITO)
+            self.boton_captura.cambiar_texto("✔", Color.EXITO)
             self.raiz.after(
                 DURACION_CONFIRMACION_MS,
-                lambda: self.boton_captura.config(text="📷", fg=Color.ICONO),
+                lambda: self.boton_captura.cambiar_texto("📷", Color.ICONO),
             )
 
     # ---------------------------------------------------------- actualización

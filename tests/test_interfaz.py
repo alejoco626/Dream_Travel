@@ -106,14 +106,25 @@ class PruebaInterfaz(unittest.TestCase):
         self.armar_escenario()
         self.app.calcular()
         self.assertEqual(texto(self.app.ajuste_actual), "$ 1,252.00")
-        self.assertEqual(texto(self.app.ajuste_por_persona), "—")
-        self.app.ajuste_nuevo.valor = "1,152"
+        self.assertEqual(texto(self.app.ajuste_diferencia), "—")
+        self.app.ajuste_nuevo.valor = "1,151.50"
         self.app._formatear_ajuste()
-        # (1,252 - 1,152) x 2 adultos = 200, entre 4 personas = 50
-        self.assertEqual(texto(self.app.ajuste_por_persona), "$ 50.00")
-        self.assertEqual(texto(self.app.ajuste_detalle), "$ 200.00 entre 4 personas")
+        # (1,252 - 1,151.50) x 2 adultos = 201.00
+        self.assertEqual(texto(self.app.ajuste_diferencia), "$ 201.00")
+        self.app.ajuste_nuevo.valor = "1,151.75"
+        self.app._formatear_ajuste()
+        # (1,252 - 1,151.75) x 2 = 200.50 -> se redondea a 201
+        self.assertEqual(texto(self.app.ajuste_diferencia), "$ 201.00")
+        self.app.ajuste_nuevo.valor = "1,151.76"
+        self.app._formatear_ajuste()
+        # 200.48 -> 200
+        self.assertEqual(texto(self.app.ajuste_diferencia), "$ 200.00")
+        self.app.redondear.set(False)
+        self.app.calcular()
+        # sin redondeo: (1,251.93 - 1,151.76) x 2 = 200.34
+        self.assertEqual(texto(self.app.ajuste_diferencia), "$ 200.34")
         self.app.limpiar()
-        self.assertEqual(texto(self.app.ajuste_por_persona), "—")
+        self.assertEqual(texto(self.app.ajuste_diferencia), "—")
 
     def test_miscelaneos_opcional(self):
         self.poner_personas(2, 1, 1)

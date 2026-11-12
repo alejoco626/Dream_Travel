@@ -1,6 +1,7 @@
 """Lógica del presupuesto, independiente de la interfaz."""
 
 from dataclasses import dataclass, field
+from decimal import ROUND_HALF_UP, Decimal
 
 from .config import (
     ADULTOS,
@@ -205,11 +206,11 @@ def precios_por_persona(presupuesto, cantidades, redondear):
     return precios
 
 
-def diferencia_por_persona(precio_adulto, precio_nuevo, cantidades):
-    """(precio adulto - precio nuevo) x adultos, repartido entre todas las personas.
+def redondear_cercano(valor):
+    """Entero más próximo; .50 sube: 50.49 -> 50, 50.50 -> 51."""
+    return float(Decimal(f"{valor:.2f}").quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
-    Devuelve (diferencia total, diferencia por persona).
-    """
-    total = (precio_adulto - precio_nuevo) * cantidades[ADULTOS]
-    personas = sum(cantidades.values())
-    return total, (total / personas if personas else 0.0)
+
+def diferencia_total(precio_adulto, precio_nuevo, cantidades):
+    """(precio adulto actual - precio adulto nuevo) x cantidad de adultos."""
+    return (precio_adulto - precio_nuevo) * cantidades[ADULTOS]

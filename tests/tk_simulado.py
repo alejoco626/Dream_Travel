@@ -66,8 +66,40 @@ class Widget:
     def winfo_reqwidth(self):
         return 0
 
+    def winfo_reqheight(self):
+        return 0
+
+    def winfo_width(self):
+        return 0
+
+    def winfo_height(self):
+        return 0
+
     def after(self, _ms, _funcion=None):
         return None
+
+
+class Comodin:
+    """Objeto que acepta cualquier llamada (para Pillow y fuentes simuladas)."""
+
+    def __getattr__(self, nombre):
+        if nombre.startswith("__"):
+            raise AttributeError(nombre)
+        return lambda *args, **kwargs: Comodin()
+
+    def __call__(self, *args, **kwargs):
+        return Comodin()
+
+
+class Fuente:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def measure(self, texto):
+        return 8 * len(texto)
+
+    def metrics(self, _clave):
+        return 16
 
 
 class BooleanVar:
@@ -91,6 +123,7 @@ def instalar():
     ):
         setattr(tk, nombre, type(nombre, (Widget,), {}))
     tk.BooleanVar = BooleanVar
+    tk.Misc = types.SimpleNamespace(tkraise=lambda widget: None)
     tk.END = "end"
     tk.INSERT = "insert"
     tk.TclError = type("TclError", (Exception,), {})
@@ -101,17 +134,22 @@ def instalar():
     ttk = types.ModuleType("tkinter.ttk")
     ttk.Combobox = type("Combobox", (Widget,), {})
     ttk.Progressbar = type("Progressbar", (Widget,), {})
+    ttk.Scrollbar = type("Scrollbar", (Widget,), {})
+    ttk.Style = Comodin()
+    fuente = types.ModuleType("tkinter.font")
+    fuente.Font = Fuente
+    tk.font = fuente
     tk.messagebox = messagebox
     tk.ttk = ttk
 
     pil = types.ModuleType("PIL")
-    pil.Image = types.SimpleNamespace()
-    pil.ImageGrab = types.SimpleNamespace()
+    pil.Image = pil.ImageGrab = pil.ImageDraw = pil.ImageTk = Comodin()
     sys.modules.update(
         {
             "tkinter": tk,
             "tkinter.messagebox": messagebox,
             "tkinter.ttk": ttk,
+            "tkinter.font": fuente,
             "PIL": pil,
             "win32clipboard": types.ModuleType("win32clipboard"),
         }

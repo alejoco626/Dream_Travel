@@ -14,8 +14,9 @@ class Color:
     ACENTO = "#960018"  # corinto: solo totales y acciones destructivas
     ACENTO_SUAVE = "#FBE9EB"
 
-    FONDO = "#FFFFFF"
-    SUPERFICIE = "#F4F6F9"  # secciones
+    LIENZO = "#EEF2F6"  # fondo de la ventana, detrás de las tarjetas
+    FONDO = "#FFFFFF"  # tarjetas y campos
+    SUPERFICIE = "#F4F6F9"  # encabezados de tabla y zonas secundarias
     SUPERFICIE_ALTERNA = "#FAFBFC"  # filas pares
     SUAVE = "#E6EEF7"  # botones secundarios
     SUAVE_HOVER = "#D3E2F1"
@@ -23,10 +24,11 @@ class Color:
     FOCO_CAMPO = "#F3F8FE"  # fondo del campo que se está editando
 
     TEXTO = "#1F2937"
-    TEXTO_SECUNDARIO = "#525B68"  # 6.3:1 sobre SUPERFICIE
+    TEXTO_SECUNDARIO = "#525B68"  # 6.3:1 sobre SUPERFICIE, 5.9:1 sobre LIENZO
     ICONO = "#6B7686"  # 4.6:1 sobre FONDO
     BORDE_CAMPO = "#8A94A3"  # 3.1:1 sobre FONDO
     DIVISOR = "#DDE3EA"  # decorativo
+    BORDE_TARJETA = "#E1E6EC"  # contorno suave de las tarjetas
 
     DESACTIVADO_FONDO = "#ECEFF3"
     DESACTIVADO_TEXTO = "#6E7681"
@@ -56,6 +58,13 @@ class Espacio:
     M = 12
     L = 16
     XL = 24
+
+
+class Radio:
+    """Radio de las esquinas en píxeles lógicos."""
+
+    TARJETA = 14
+    CONTROL = 8
 
 
 _escala = {"factor": 1.0}
