@@ -758,7 +758,7 @@ class Calculadora:
             campo.grid(row=1, column=columna, sticky="w", padx=(0, px(Espacio.XL)), pady=(px(Espacio.XS), 0))
             self.fechas_pago[clave] = campo
         tk.Label(
-            self.bloque_fechas, text="dd/mm/aa", font=Tipo.NOTA,
+            self.bloque_fechas, text="dd/mm/aaaa", font=Tipo.NOTA,
             bg=Color.FONDO, fg=Color.TEXTO_SECUNDARIO,
         ).grid(row=1, column=2, sticky="w")
         self.aviso_pago = tk.Label(
@@ -1025,8 +1025,6 @@ class Calculadora:
         )
         self.ajuste_diferencia = texto(tabla, "—", Tipo.CIFRA, Color.ACENTO)
         self.ajuste_diferencia.grid(row=2, column=1, sticky="e", pady=(px(Espacio.S), 0))
-        self.ajuste_detalle = texto(tabla, "")
-        self.ajuste_detalle.grid(row=3, column=0, columnspan=2, sticky="e")
 
     def _formatear_ajuste(self, _evento=None):
         if self.ajuste_nuevo.get().strip():
@@ -1045,16 +1043,11 @@ class Calculadora:
             precio_nuevo = None
         if precio_nuevo is None or precios is None:
             self.ajuste_diferencia.config(text="—")
-            self.ajuste_detalle.config(text="")
             return
-        adultos = self.cantidad(ADULTOS)
         diferencia = diferencia_total(precio_actual, precio_nuevo, self.cantidades())
         if self.redondear.get():
             diferencia = redondear_cercano(diferencia)
         self.ajuste_diferencia.config(text=dinero(diferencia))
-        self.ajuste_detalle.config(
-            text=f"({dinero(precio_actual)} − {dinero(precio_nuevo)}) × {adultos} adultos"
-        )
 
     def _actualizar_filas_resumen(self):
         activos = self.tipos_activos()

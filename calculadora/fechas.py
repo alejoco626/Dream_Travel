@@ -1,9 +1,9 @@
-"""Fechas en formato dd/mm/aa y cálculo de la fecha de pago."""
+"""Fechas en formato dd/mm/aaaa y cálculo de la fecha de pago."""
 
 import calendar
 from datetime import date, timedelta
 
-FORMATO = "%d/%m/%y"
+FORMATO = "%d/%m/%Y"
 DIAS_ANTES_DE_CANCELACION = 15
 
 
@@ -12,21 +12,22 @@ def formato_fecha(fecha):
 
 
 def leer_fecha(texto):
-    """'25/12/26' -> date(2026, 12, 25). Devuelve None si la fecha no está completa o no existe."""
+    """'25/12/2026' -> date(2026, 12, 25). None si la fecha no está completa o no existe."""
     partes = texto.strip().split("/")
-    if len(partes) != 3 or not all(p.isdigit() for p in partes) or len(partes[2]) != 2:
+    if len(partes) != 3 or not all(p.isdigit() for p in partes) or len(partes[2]) != 4:
         return None
     dia, mes, anio = (int(p) for p in partes)
     try:
-        return date(2000 + anio, mes, dia)
+        return date(anio, mes, dia)
     except ValueError:
         return None
 
 
 def con_diagonales(texto):
-    """Toma los dígitos escritos y los acomoda como dd/mm/aa: '251226' -> '25/12/26'."""
-    digitos = "".join(c for c in texto if c.isdigit())[:6]
-    return "/".join(digitos[i:i + 2] for i in range(0, len(digitos), 2))
+    """Toma los dígitos escritos y los acomoda como dd/mm/aaaa: '25122026' -> '25/12/2026'."""
+    digitos = "".join(c for c in texto if c.isdigit())[:8]
+    partes = [digitos[:2], digitos[2:4], digitos[4:]]
+    return "/".join(parte for parte in partes if parte)
 
 
 def restar_meses(fecha, meses):

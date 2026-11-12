@@ -130,15 +130,15 @@ class PruebaInterfaz(unittest.TestCase):
         app = self.app
         viaje, cancelacion = app.fechas_pago["viaje"], app.fechas_pago["cancelacion"]
         self.assertIn("Escribe las dos fechas", texto(app.aviso_pago))
-        viaje.entrada.valor = "201226"
+        viaje.entrada.valor = "20122026"
         viaje._poner_diagonales()
-        self.assertEqual(viaje.entrada.valor, "20/12/26")
+        self.assertEqual(viaje.entrada.valor, "20/12/2026")
         cancelacion.poner_fecha(__import__("datetime").date(2026, 10, 1))
-        self.assertEqual(texto(app.aviso_pago), "Fecha de pago: 20/11/26")
+        self.assertEqual(texto(app.aviso_pago), "Fecha de pago: 20/11/2026")
         self.assertEqual(app.aviso_pago.kw["fg"], "#1E7A4C")
-        cancelacion.entrada.valor = "01/12/26"
+        cancelacion.entrada.valor = "01/12/2026"
         app._actualizar_pago()
-        self.assertEqual(texto(app.aviso_pago), "Fecha de pago: 16/11/26")
+        self.assertEqual(texto(app.aviso_pago), "Fecha de pago: 16/11/2026")
         self.assertEqual(app.aviso_pago.kw["fg"], "#C62828")
         app.no_reembolsable.set(True)
         app._actualizar_pago()

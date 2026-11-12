@@ -19,14 +19,16 @@ class PruebaFechas(unittest.TestCase):
         self.assertEqual(con_diagonales("2"), "2")
         self.assertEqual(con_diagonales("251"), "25/1")
         self.assertEqual(con_diagonales("2512"), "25/12")
-        self.assertEqual(con_diagonales("25/12/2026"), "25/12/20")
-        self.assertEqual(con_diagonales("251226"), "25/12/26")
+        self.assertEqual(con_diagonales("25122"), "25/12/2")
+        self.assertEqual(con_diagonales("25122026"), "25/12/2026")
+        self.assertEqual(con_diagonales("25/12/20269"), "25/12/2026")
 
     def test_leer_y_formatear(self):
-        self.assertEqual(leer_fecha("25/12/26"), date(2026, 12, 25))
-        self.assertIsNone(leer_fecha("31/02/26"))
+        self.assertEqual(leer_fecha("25/12/2026"), date(2026, 12, 25))
+        self.assertIsNone(leer_fecha("31/02/2026"))
+        self.assertIsNone(leer_fecha("25/12/26"))
         self.assertIsNone(leer_fecha("25/12"))
-        self.assertEqual(formato_fecha(date(2026, 3, 5)), "05/03/26")
+        self.assertEqual(formato_fecha(date(2026, 3, 5)), "05/03/2026")
 
     def test_restar_meses(self):
         self.assertEqual(restar_meses(date(2026, 3, 31), 1), date(2026, 2, 28))

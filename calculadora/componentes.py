@@ -403,7 +403,7 @@ class Calendario:
 
 
 class CampoFecha(tk.Frame):
-    """Campo dd/mm/aa: pone las diagonales solo y tiene un botón de calendario."""
+    """Campo dd/mm/aaaa: pone las diagonales solo y tiene un botón de calendario."""
 
     TECLAS_PERMITIDAS = {
         "BackSpace", "Delete", "Left", "Right", "Home", "End", "Tab", "ISO_Left_Tab",
@@ -416,7 +416,7 @@ class CampoFecha(tk.Frame):
         self.campo = Campo(
             self,
             lambda contenedor: tk.Entry(
-                contenedor, font=Tipo.DATO, justify="center", width=9,
+                contenedor, font=Tipo.DATO, justify="center", width=11,
                 bg=Color.FONDO, fg=Color.TEXTO, insertbackground=Color.MARCA,
             ),
         )
