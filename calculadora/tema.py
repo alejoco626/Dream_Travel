@@ -34,7 +34,7 @@ class Color:
 
 
 class Tipo:
-    """Escala tipográfica (puntos): 9 · 10 · 11 · 16 · 18 · 22."""
+    """Escala tipográfica (puntos): 9 · 10 · 11 · 16."""
 
     NOTA = (FAMILIA, 9)
     NOTA_FUERTE = (FAMILIA, 9, "bold")
@@ -43,8 +43,7 @@ class Tipo:
     DATO = (FAMILIA, 11)
     DATO_FUERTE = (FAMILIA, 11, "bold")
     TITULO_APP = (FAMILIA, 16, "bold")
-    DESTACADO = (FAMILIA, 18, "bold")
-    DISPLAY = (FAMILIA, 22, "bold")
+    CIFRA = (FAMILIA, 16, "bold")  # precios por persona y totales del resumen
     ICONO = (FAMILIA, 11)
     EMOJI = ("Segoe UI Emoji", 12)
 

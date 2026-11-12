@@ -796,24 +796,7 @@ class Calculadora:
         panel.grid(row=0, column=1, sticky="ns", padx=(px(Espacio.XS), 0))
         texto = self._texto_resumen
 
-        texto(panel, "RESUMEN", Tipo.CUERPO_FUERTE, Color.MARCA).pack(anchor="w")
-        texto(panel, "Total PVP").pack(anchor="w", pady=(px(Espacio.M), 0))
-        self.total_pvp = texto(panel, MONTO_VACIO, Tipo.DISPLAY, Color.ACENTO)
-        self.total_pvp.pack(anchor="w")
-        self.total_pvp_q = texto(panel, "Q 0.00", Tipo.DATO)
-        self.total_pvp_q.pack(anchor="w")
-
-        cabeza = tk.Frame(panel, bg=Color.SUPERFICIE)
-        cabeza.pack(anchor="w", pady=(px(Espacio.M), 0))
-        texto(cabeza, "Total con descuento").pack(side="left")
-        texto(cabeza, "  un solo pago en efectivo", Tipo.NOTA, Color.ACENTO).pack(side="left")
-        self.total_descuento = texto(panel, MONTO_VACIO, Tipo.DESTACADO, Color.ACENTO)
-        self.total_descuento.pack(anchor="w")
-        self.total_descuento_q = texto(panel, "Q 0.00", Tipo.DATO)
-        self.total_descuento_q.pack(anchor="w")
-
-        tk.Frame(panel, bg=Color.DIVISOR, height=1).pack(fill="x", pady=px(Espacio.L))
-
+        # Arriba, lo que más se consulta: el precio por persona.
         texto(panel, "POR PERSONA", Tipo.CUERPO_FUERTE, Color.MARCA).pack(anchor="w")
         tabla = tk.Frame(panel, bg=Color.SUPERFICIE)
         tabla.pack(fill="x", pady=(px(Espacio.S), 0))
@@ -828,10 +811,10 @@ class Calculadora:
         for indice, tipo in enumerate(TIPOS_PERSONA):
             fila = 1 + indice * 3
             celdas = {
-                "nombre": (texto(tabla, NOMBRES_TIPO[tipo], Tipo.CUERPO_FUERTE, Color.TEXTO), fila, 0, "w"),
+                "nombre": (texto(tabla, NOMBRES_TIPO[tipo], Tipo.DATO_FUERTE, Color.TEXTO), fila, 0, "w"),
                 "cantidad": (texto(tabla, "× 0"), fila + 1, 0, "nw"),
-                "pvp": (texto(tabla, MONTO_VACIO, Tipo.DATO_FUERTE, Color.TEXTO), fila, 1, "e"),
-                "descuento": (texto(tabla, MONTO_VACIO, Tipo.DATO_FUERTE, Color.TEXTO), fila, 2, "e"),
+                "pvp": (texto(tabla, MONTO_VACIO, Tipo.CIFRA, Color.MARCA), fila, 1, "e"),
+                "descuento": (texto(tabla, MONTO_VACIO, Tipo.CIFRA, Color.MARCA), fila, 2, "e"),
                 "pvp_q": (texto(tabla, "Q 0.00"), fila + 1, 1, "e"),
                 "descuento_q": (texto(tabla, "Q 0.00"), fila + 1, 2, "e"),
                 "pvp_total": (texto(tabla, f"Total {MONTO_VACIO}"), fila + 2, 1, "e"),
@@ -846,6 +829,25 @@ class Calculadora:
                     pady=(px(10), 0) if fila_grid == fila else 0,
                 )
             self.resumen_filas[tipo] = {clave: celda[0] for clave, celda in celdas.items()}
+
+        tk.Frame(panel, bg=Color.DIVISOR, height=1).pack(fill="x", pady=px(Espacio.L))
+
+        # Abajo, los totales del grupo.
+        texto(panel, "RESUMEN", Tipo.CUERPO_FUERTE, Color.MARCA).pack(anchor="w")
+        texto(panel, "Total PVP").pack(anchor="w", pady=(px(Espacio.S), 0))
+        self.total_pvp = texto(panel, MONTO_VACIO, Tipo.CIFRA, Color.ACENTO)
+        self.total_pvp.pack(anchor="w")
+        self.total_pvp_q = texto(panel, "Q 0.00")
+        self.total_pvp_q.pack(anchor="w")
+
+        cabeza = tk.Frame(panel, bg=Color.SUPERFICIE)
+        cabeza.pack(anchor="w", pady=(px(Espacio.S), 0))
+        texto(cabeza, "Total con descuento").pack(side="left")
+        texto(cabeza, "  un solo pago en efectivo", Tipo.NOTA, Color.ACENTO).pack(side="left")
+        self.total_descuento = texto(panel, MONTO_VACIO, Tipo.CIFRA, Color.ACENTO)
+        self.total_descuento.pack(anchor="w")
+        self.total_descuento_q = texto(panel, "Q 0.00")
+        self.total_descuento_q.pack(anchor="w")
 
         botones = tk.Frame(panel, bg=Color.SUPERFICIE)
         botones.pack(side="bottom", fill="x", pady=(px(Espacio.L), 0))
