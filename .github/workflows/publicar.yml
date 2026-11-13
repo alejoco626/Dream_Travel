@@ -40,6 +40,16 @@ jobs:
           --hidden-import win32clipboard
           calculadora_dream_travel.py
 
+      - name: Comprobar que el programa abre
+        run: |
+          $env:CALCULADORA_PRUEBA_ARRANQUE = "1"
+          $registro = Join-Path $env:LOCALAPPDATA "DreamTravel\calculadora_error.log"
+          Remove-Item $registro -ErrorAction SilentlyContinue
+          $proceso = Start-Process dist\Calculadora_Dream_Travel.exe -PassThru
+          if (-not $proceso.WaitForExit(60000)) { $proceso.Kill(); throw "El programa no cerro a tiempo" }
+          if (Test-Path $registro) { Get-Content $registro; throw "El programa fallo al abrir" }
+          if ($proceso.ExitCode -ne 0) { throw "Codigo de salida $($proceso.ExitCode)" }
+
       - name: Instalar Inno Setup
         run: choco install innosetup -y --no-progress
 

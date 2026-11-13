@@ -28,10 +28,6 @@ def dinero(valor):
     return f"$ {valor:,.2f}"
 
 
-def quetzales(valor):
-    return f"Q {valor * TIPO_CAMBIO_GTQ:,.2f}"
-
-
 def tipos_activos(cantidades):
     """Adultos siempre; niños e infantes solo si hay al menos uno."""
     return [ADULTOS] + [t for t in (NINOS, INFANTES) if cantidades.get(t, 0) > 0]

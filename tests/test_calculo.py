@@ -10,7 +10,7 @@ from calculadora.calculo import (  # noqa: E402
     costos_por_tipo,
     dinero,
     leer_monto,
-    quetzales,
+    formato_quetzales,
     tipos_activos,
 )
 
@@ -43,7 +43,7 @@ class PruebaFormato(unittest.TestCase):
 
     def test_formatos(self):
         self.assertEqual(dinero(1234.5), "$ 1,234.50")
-        self.assertEqual(quetzales(1000), "Q 7,880.00")
+        self.assertEqual(formato_quetzales(7880), "Q 7,880.00")
 
 
 class PruebaCostos(unittest.TestCase):
