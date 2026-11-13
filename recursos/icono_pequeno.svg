@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><defs><clipPath id="cp"><rect x="4" y="4" width="248" height="248" rx="56"/></clipPath></defs><g clip-path="url(#cp)"><rect width="256" height="256" fill="#003D6B"/><path d="M0,0 L256,0 L0,256 Z" fill="#960018"/></g>
+<rect x="52" y="58" width="152" height="170" rx="26" fill="#fff"/>
+<rect x="72" y="78" width="112" height="40" rx="10" fill="#003D6B"/>
+<rect x="74" y="132" width="30" height="22" rx="5" fill="#C9D7E6"/><rect x="114" y="132" width="30" height="22" rx="5" fill="#C9D7E6"/><rect x="154" y="132" width="30" height="22" rx="5" fill="#C9D7E6"/><rect x="74" y="164" width="30" height="22" rx="5" fill="#C9D7E6"/><rect x="114" y="164" width="30" height="22" rx="5" fill="#C9D7E6"/><rect x="154" y="164" width="30" height="22" rx="5" fill="#C9D7E6"/><rect x="74" y="196" width="30" height="22" rx="5" fill="#C9D7E6"/><rect x="114" y="196" width="30" height="22" rx="5" fill="#C9D7E6"/><rect x="154" y="196" width="30" height="22" rx="5" fill="#960018"/>
+<g transform="translate(192,58) rotate(45) scale(1.35)"><circle r="31" fill="#fff"/><path d="M0,-30 C3,-30 5,-26 5,-20 L5,-6 L30,8 L30,14 L5,6 L5,20 L13,26 L13,31 L0,27 L-13,31 L-13,26 L-5,20 L-5,6 L-30,14 L-30,8 L-5,-6 L-5,-20 C-5,-26 -3,-30 0,-30 Z" fill="#960018" transform="scale(.8)"/></g>
+</svg>

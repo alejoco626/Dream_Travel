@@ -21,8 +21,8 @@ jobs:
         run: >
           pyinstaller --onefile --windowed --clean
           --name Calculadora_Dream_Travel
-          --icon Logo_Ovalado.ico
-          --add-data "Logo_Ovalado.ico;."
+          --icon icono_calculadora.ico
+          --add-data "icono_calculadora.ico;."
           --add-data "Logo_Letras_Blanco.png;."
           --hidden-import win32clipboard
           calculadora_dream_travel.py

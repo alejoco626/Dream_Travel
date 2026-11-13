@@ -80,6 +80,14 @@ def activar_dpi():
         pass  # fuera de Windows o en versiones sin soporte
 
 
+def identificar_en_barra_de_tareas():
+    """Hace que Windows muestre el ícono propio en la barra de tareas (y no el de Python)."""
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("DreamTravel.Calculadora")
+    except (AttributeError, OSError):
+        pass
+
+
 def descripcion_grupo(clave, incluye_ninos):
     if clave == CLAVE_ADULTOS:
         return "Monto de los adultos"
@@ -371,7 +379,8 @@ class Calculadora:
     # ------------------------------------------------------------ estructura
     def _configurar_ventana(self):
         raiz = self.raiz
-        raiz.iconbitmap(ruta_recurso("Logo_Ovalado.ico"))
+        # default= aplica el ícono también a las ventanas secundarias (diálogos).
+        raiz.iconbitmap(default=ruta_recurso("icono_calculadora.ico"))
         raiz.title("Dream & Travel - Calculadora")
         raiz.configure(bg=Color.LIENZO)
         estilo = ttk.Style(raiz)
@@ -1271,6 +1280,7 @@ def registrar_error(texto):
 
 def main():
     activar_dpi()
+    identificar_en_barra_de_tareas()
     try:
         raiz = tk.Tk()
         raiz.report_callback_exception = lambda *error: registrar_error(
