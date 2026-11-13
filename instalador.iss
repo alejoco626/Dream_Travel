@@ -15,12 +15,14 @@ PrivilegesRequired=lowest
 OutputDir=Output
 OutputBaseFilename=Calculadora_Dream_Travel_Setup
 SetupIconFile=icono_calculadora.ico
-UninstallDisplayIcon={app}\Calculadora_Dream_Travel.exe
+UninstallDisplayIcon={app}\icono_calculadora.ico
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
 RestartApplications=no
+; Avisa a Windows que refresque los iconos al terminar (evita que muestre el icono anterior).
+ChangesAssociations=yes
 
 [Languages]
 #if FileExists(CompilerPath + "Languages\Spanish.isl")
@@ -32,10 +34,13 @@ Name: "desktopicon"; Description: "Crear un acceso directo en el escritorio"; Fl
 
 [Files]
 Source: "dist\Calculadora_Dream_Travel.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "icono_calculadora.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Dream & Travel Calculadora"; Filename: "{app}\Calculadora_Dream_Travel.exe"
-Name: "{autodesktop}\Dream & Travel Calculadora"; Filename: "{app}\Calculadora_Dream_Travel.exe"; Tasks: desktopicon
+; AppUserModelID debe coincidir con el que usa el programa (config.ID_APP_WINDOWS): asi la ventana,
+; el menu Inicio y lo que se ancle a la barra de tareas son la misma app y usan el mismo icono.
+Name: "{autoprograms}\Dream & Travel Calculadora"; Filename: "{app}\Calculadora_Dream_Travel.exe"; IconFilename: "{app}\icono_calculadora.ico"; AppUserModelID: "DreamTravel.Calculadora"
+Name: "{autodesktop}\Dream & Travel Calculadora"; Filename: "{app}\Calculadora_Dream_Travel.exe"; IconFilename: "{app}\icono_calculadora.ico"; AppUserModelID: "DreamTravel.Calculadora"; Tasks: desktopicon
 
 [InstallDelete]
 ; Limpia restos de versiones anteriores antes de copiar la nueva.

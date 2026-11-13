@@ -31,6 +31,7 @@ from .config import (
     CLAVE_ADULTOS_NINOS_INFANTES,
     CLAVES_MONTO,
     EDADES_TIPO,
+    ID_APP_WINDOWS,
     INFANTES,
     MODO_CAPTURA,
     MODO_PERSONA,
@@ -100,7 +101,7 @@ def activar_dpi():
 def identificar_en_barra_de_tareas():
     """Hace que Windows muestre el ícono propio en la barra de tareas (y no el de Python)."""
     try:
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("DreamTravel.Calculadora")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(ID_APP_WINDOWS)
     except (AttributeError, OSError):
         pass
 

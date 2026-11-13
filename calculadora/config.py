@@ -13,6 +13,8 @@ URL_ULTIMA_VERSION = f"https://api.github.com/repos/{REPO_GITHUB}/releases/lates
 PREFIJO_DESCARGA = f"https://github.com/{REPO_GITHUB}/releases/download/"
 CARPETA_ACTUALIZACION = os.path.join(tempfile.gettempdir(), "DreamTravel_Calculadora_Update")
 AGENTE_HTTP = "DreamTravel-Calculadora"
+# Identidad de la app en la barra de tareas; debe coincidir con AppUserModelID de instalador.iss.
+ID_APP_WINDOWS = "DreamTravel.Calculadora"
 
 # --- Moneda ----------------------------------------------------------------
 TIPO_CAMBIO_GTQ = 7.88
