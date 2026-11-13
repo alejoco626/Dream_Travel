@@ -73,6 +73,23 @@ def ruta_recurso(nombre):
     return os.path.join(base, nombre)
 
 
+def iconos_de_archivo(ruta):
+    """Cada tamaño del .ico como imagen de Tk, del más grande al más chico."""
+    from PIL import Image, ImageTk
+
+    try:
+        icono = Image.open(ruta)
+        tamanos = sorted(icono.info.get("sizes", ()), reverse=True)
+        imagenes = []
+        for tamano in tamanos:
+            icono.size = tamano
+            icono.load()
+            imagenes.append(ImageTk.PhotoImage(icono.copy()))
+        return imagenes
+    except (OSError, ValueError, AttributeError, TypeError, tk.TclError):
+        return []
+
+
 def activar_dpi():
     try:
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -379,8 +396,14 @@ class Calculadora:
     # ------------------------------------------------------------ estructura
     def _configurar_ventana(self):
         raiz = self.raiz
+        ruta_icono = ruta_recurso("icono_calculadora.ico")
         # default= aplica el ícono también a las ventanas secundarias (diálogos).
-        raiz.iconbitmap(default=ruta_recurso("icono_calculadora.ico"))
+        raiz.iconbitmap(default=ruta_icono)
+        # Además se entregan todos los tamaños como imágenes para que la barra de tareas
+        # y la ventana usen el que corresponde a la escala de pantalla, sin pixelarse.
+        self._iconos = iconos_de_archivo(ruta_icono)
+        if self._iconos:
+            raiz.iconphoto(True, *self._iconos)
         raiz.title("Dream & Travel - Calculadora")
         raiz.configure(bg=Color.LIENZO)
         estilo = ttk.Style(raiz)
