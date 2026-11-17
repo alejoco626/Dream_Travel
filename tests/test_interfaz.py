@@ -150,16 +150,16 @@ class PruebaInterfaz(unittest.TestCase):
         app = self.app
         self.poner_montos(app.filas[0], 1000, 1600, 1700)
         app.calcular(silencioso=True)
-        self.assertEqual(texto(app.monto_reserva), "$ 1,000.00")  # solo adultos
+        self.assertEqual(texto(app.monto_reserva), "$ 1,250.00")  # solo adultos: 1,000 / 0.80
         self.poner_personas(2, 1, 0)
         app.calcular(silencioso=True)
-        self.assertEqual(texto(app.monto_reserva), "$ 1,600.00")  # adultos + niños
+        self.assertEqual(texto(app.monto_reserva), "$ 2,000.00")  # adultos + niños
         self.poner_personas(2, 1, 1)
         app.calcular(silencioso=True)
-        self.assertEqual(texto(app.monto_reserva), "$ 1,700.00")  # todos
+        self.assertEqual(texto(app.monto_reserva), "$ 2,125.00")  # todos
         self.poner_personas(2, 0, 1)
         app.calcular(silencioso=True)
-        self.assertEqual(texto(app.monto_reserva), "$ 1,700.00")  # adultos + infantes
+        self.assertEqual(texto(app.monto_reserva), "$ 2,125.00")  # adultos + infantes
         app.limpiar()
         self.assertEqual(texto(app.monto_reserva), "$ 0.00")
 

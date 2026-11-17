@@ -10,7 +10,7 @@ niños e infantes. Calcula el PVP por persona, el precio con descuento por pago
 2. En **Servicios**, escribe el monto total de cada grupo (Diseñador va por persona).
    Con **＋ Agregar servicio** se suman cruceros, seguros, misceláneos, etc.
 3. En **Condiciones de pago**, marca *No reembolsable* o escribe la fecha de viaje y
-   la de cancelación del hotel (dd/mm/aaaa, o con el calendario 📅) para ver la fecha de pago y el **Monto para reservar** (el monto de boletos de todo el grupo).
+   la de cancelación del hotel (dd/mm/aaaa, o con el calendario 📅) para ver la fecha de pago y el **Monto para reservar** (el precio de los boletos de todo el grupo, ya dividido entre 0.80).
 4. El panel derecho se actualiza mientras escribes: **Por persona**, **Resumen** y el
    **Ajuste de precio adulto**. *Redondear* lleva los precios al entero más próximo.
 5. **Ver desglose** muestra el detalle por servicio y 📷 copia una captura de toda la

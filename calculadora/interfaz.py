@@ -805,9 +805,9 @@ class Calculadora:
         self._actualizar_pago()
 
     def monto_para_reservar(self):
-        """Monto de los boletos para todo el grupo: la columna de boletos que suma a
-        todas las personas (adultos; adultos + niños; o adultos + niños + infantes).
-        None si el monto escrito no es válido."""
+        """Precio bruto de los boletos para todo el grupo: la columna de boletos que suma
+        a todas las personas (adultos; adultos + niños; o adultos + niños + infantes),
+        dividida entre su proporción de costo (0.80). None si el monto no es válido."""
         boletos = next((fila for fila in self.filas if fila.base == "BOLETOS NETOS"), None)
         if boletos is None:
             return 0.0
@@ -819,7 +819,7 @@ class Calculadora:
         else:
             clave = CLAVE_ADULTOS
         try:
-            return leer_monto(boletos.entradas[clave].get())
+            return leer_monto(boletos.entradas[clave].get()) / boletos.proporcion
         except ValueError:
             return None
 
