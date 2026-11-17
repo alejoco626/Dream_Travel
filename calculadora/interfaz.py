@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox, ttk
 
-from . import actualizador, captura, fechas
+from . import actualizador, captura, fechas, novedades
 from .calculo import (
     ServicioCapturado,
     calcular_presupuesto,
@@ -57,6 +57,7 @@ RETARDO_CALCULO_MS = 250
 RETARDO_CAPTURA_MS = 150
 DURACION_CONFIRMACION_MS = 1200
 RETARDO_REVISION_ACTUALIZACION_MS = 2500
+RETARDO_NOVEDADES_MS = 600
 SONDEO_MS = 100
 
 ENCABEZADOS_DESGLOSE = (
@@ -392,6 +393,7 @@ class Calculadora:
         raiz.bind_all("<Control-Return>", lambda _evento: self.calcular())
         raiz.bind_all("<Control-KP_Enter>", lambda _evento: self.calcular())
         self.personas[ADULTOS].focus()
+        raiz.after(RETARDO_NOVEDADES_MS, self.mostrar_novedades)
         raiz.after(RETARDO_REVISION_ACTUALIZACION_MS, self.iniciar_revision_actualizacion)
 
     # ------------------------------------------------------------ estructura
@@ -1218,6 +1220,54 @@ class Calculadora:
                 lambda: self.boton_captura.cambiar_texto("📷", Color.ICONO),
             )
 
+    # -------------------------------------------------------------- novedades
+    def mostrar_novedades(self):
+        """Ventana de novedades, una sola vez después de cada actualización."""
+        if not getattr(sys, "frozen", False):
+            return  # en desarrollo no se lleva registro de versiones
+        notas = novedades.notas_a_mostrar(
+            VERSION_APP,
+            novedades.ARGUMENTO_ACTUALIZADO in sys.argv,
+            novedades.leer_version_vista(),
+        )
+        novedades.guardar_version_vista(VERSION_APP)
+        if notas:
+            self._ventana_novedades(notas)
+
+    def _ventana_novedades(self, notas):
+        ventana = tk.Toplevel(self.raiz)
+        ventana.title("Actualización")
+        ventana.configure(bg=Color.FONDO)
+        ventana.resizable(False, False)
+        ventana.transient(self.raiz)
+        cuerpo = tk.Frame(ventana, bg=Color.FONDO, padx=px(Espacio.XL), pady=px(Espacio.L))
+        cuerpo.pack(fill="both", expand=True)
+        tk.Label(
+            cuerpo, text=f"¡Actualización v{VERSION_APP}!", font=Tipo.TITULO_APP,
+            bg=Color.FONDO, fg=Color.MARCA,
+        ).pack(anchor="w")
+        for clave, titulo, vineta in (("cambios", "Cambios", "-"), ("correcciones", "Correcciones", "•")):
+            elementos = notas.get(clave) or []
+            if not elementos:
+                continue
+            tk.Label(
+                cuerpo, text=titulo, font=Tipo.CUERPO_FUERTE, bg=Color.FONDO, fg=Color.TEXTO,
+            ).pack(anchor="w", pady=(px(Espacio.M), px(Espacio.XS)))
+            for elemento in elementos:
+                tk.Label(
+                    cuerpo, text=f"{vineta}  {elemento}", font=Tipo.CUERPO, bg=Color.FONDO,
+                    fg=Color.TEXTO, justify="left", anchor="w", wraplength=px(380),
+                ).pack(anchor="w", padx=(px(Espacio.S), 0))
+        boton = Boton(cuerpo, "Entendido", ventana.destroy, "primario")
+        boton.pack(anchor="e", pady=(px(Espacio.L), 0))
+        ventana.bind("<Escape>", lambda _evento: ventana.destroy())
+        ventana.update_idletasks()
+        x = self.raiz.winfo_rootx() + (self.raiz.winfo_width() - ventana.winfo_width()) // 2
+        y = self.raiz.winfo_rooty() + (self.raiz.winfo_height() - ventana.winfo_height()) // 3
+        ventana.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        ventana.grab_set()
+        boton.focus_set()
+
     # ---------------------------------------------------------- actualización
     def iniciar_revision_actualizacion(self):
         if not getattr(sys, "frozen", False):
@@ -1281,7 +1331,11 @@ class Calculadora:
                     "Actualización", f"No se pudo descargar la actualización.\n{resultado[1]}"
                 )
                 return
-            actualizador.lanzar_instalador(resultado[1])
+            try:
+                actualizador.lanzar_instalador(resultado[1], info["sha256"])
+            except (OSError, ValueError) as error:
+                messagebox.showerror("Actualización", f"No se pudo instalar la actualización.\n{error}")
+                return
             self.raiz.destroy()
 
         self.raiz.after(SONDEO_MS, revisar)

@@ -75,6 +75,12 @@ class Widget:
     def winfo_height(self):
         return 0
 
+    def winfo_rootx(self):
+        return 0
+
+    def winfo_rooty(self):
+        return 0
+
     def after(self, _ms, _funcion=None):
         return None
 

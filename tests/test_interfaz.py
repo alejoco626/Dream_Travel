@@ -146,6 +146,32 @@ class PruebaInterfaz(unittest.TestCase):
         self.assertFalse(app.no_reembolsable.get())
         self.assertEqual(viaje.entrada.valor, "")
 
+    def test_ventana_de_novedades_tras_actualizar(self):
+        import tempfile
+        from unittest import mock
+        ruta = os.path.join(tempfile.mkdtemp(), "ultima_version.txt")
+        with mock.patch.object(sys, "frozen", True, create=True), \
+                mock.patch.object(sys, "argv", ["calculadora", "--actualizado"]), \
+                mock.patch.object(self.interfaz, "VERSION_APP", "1.0.12"), \
+                mock.patch.object(self.interfaz.novedades, "ARCHIVO_VERSION_VISTA", ruta):
+            antes = len(tk_simulado.WIDGETS)
+            self.app.mostrar_novedades()
+            textos = [w.kw.get("text") for w in tk_simulado.WIDGETS[antes:]]
+            self.assertIn("¡Actualización v1.0.12!", textos)
+            self.assertIn("Correcciones", textos)
+            self.assertNotIn("Cambios", textos)
+            self.assertIn("•  Se cambiaron los parámetros de edad de niños e infantes", textos)
+            # la segunda vez ya no aparece
+            sys.argv = ["calculadora"]
+            antes = len(tk_simulado.WIDGETS)
+            self.app.mostrar_novedades()
+            self.assertNotIn("¡Actualización v1.0.12!", [w.kw.get("text") for w in tk_simulado.WIDGETS[antes:]])
+
+    def test_edades(self):
+        textos = [w.kw.get("text") for w in tk_simulado.WIDGETS]
+        for edad in ("de 2 a 9 años", "de 0 a 23 meses", "de 10 años en adelante"):
+            self.assertIn(edad, textos)
+
     def test_miscelaneos_opcional(self):
         self.poner_personas(2, 1, 1)
         fila = self.app.agregar_servicio("MISCELANEOS")

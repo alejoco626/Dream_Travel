@@ -50,8 +50,9 @@ Type: filesandordirs; Name: "{app}\_internal"
 [Run]
 ; Instalacion normal: pregunta si abrir el programa al terminar.
 Filename: "{app}\Calculadora_Dream_Travel.exe"; Description: "Abrir la calculadora"; Flags: nowait postinstall skipifsilent
-; Actualizacion automatica (modo silencioso): vuelve a abrir el programa sola.
-Filename: "{app}\Calculadora_Dream_Travel.exe"; Flags: nowait skipifnotsilent
+; Actualizacion automatica (modo silencioso): vuelve a abrir el programa sola y
+; le avisa que acaba de actualizarse para que muestre las novedades.
+Filename: "{app}\Calculadora_Dream_Travel.exe"; Parameters: "--actualizado"; Flags: nowait skipifnotsilent
 
 [Code]
 function SetEnvironmentVariable(lpName, lpValue: String): Boolean;

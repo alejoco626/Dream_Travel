@@ -88,9 +88,9 @@ INFANTES = "INFANTES"
 TIPOS_PERSONA = (ADULTOS, NINOS, INFANTES)
 NOMBRES_TIPO = {ADULTOS: "Adultos", NINOS: "Niños", INFANTES: "Infantes"}
 EDADES_TIPO = {
-    ADULTOS: "mayores de 11 años",
-    NINOS: "de 4 a 11 años",
-    INFANTES: "de 0 a 3 años",
+    ADULTOS: "de 10 años en adelante",
+    NINOS: "de 2 a 9 años",
+    INFANTES: "de 0 a 23 meses",
 }
 
 # Cada servicio se captura en tres montos acumulados:

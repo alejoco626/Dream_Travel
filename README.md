@@ -39,6 +39,7 @@ python -m unittest discover -s tests -t .    # pruebas (no requieren pantalla)
 | `calculadora/componentes.py` | Tarjetas, campos, botones, calendario y textos de ayuda |
 | `calculadora/interfaz.py` | Ventana principal |
 | `calculadora/actualizador.py` | Actualización automática desde GitHub Releases |
+| `calculadora/novedades.py` | Notas que se muestran después de cada actualización |
 | `calculadora/captura.py` | Captura de pantalla al portapapeles |
 | `icono_calculadora.ico` | Ícono de la app (16 a 256 px) |
 | `Logo_Letras_Blanco.png` | Logo del encabezado |
@@ -47,6 +48,9 @@ python -m unittest discover -s tests -t .    # pruebas (no requieren pantalla)
 | `tests/` | Pruebas automáticas |
 
 ## Publicar una versión
+
+Antes de publicar, agrega las notas de la versión en `calculadora/novedades.py`
+(cambios y correcciones). Cada computadora las muestra una vez al terminar de actualizar.
 
 Crea un release con una etiqueta nueva (por ejemplo `v1.0.9`). GitHub Actions
 ejecuta las pruebas, compila el `.exe` con PyInstaller, comprueba que abre, arma el

@@ -1,5 +1,6 @@
 """Lógica del presupuesto, independiente de la interfaz."""
 
+import math
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -21,7 +22,10 @@ def leer_monto(texto):
     """Convierte '$ 1,250.00' en 1250.0. Vacío vale 0. Lanza ValueError si no es número."""
     if not texto.strip():
         return 0.0
-    return float(texto.replace("$", "").replace(",", "").strip())
+    valor = float(texto.replace("$", "").replace(",", "").strip())
+    if not math.isfinite(valor):  # float() acepta "nan" e "inf", que romperían los totales
+        raise ValueError("monto no válido")
+    return valor
 
 
 def dinero(valor):

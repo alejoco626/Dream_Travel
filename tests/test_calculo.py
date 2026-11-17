@@ -29,6 +29,9 @@ class PruebaFormato(unittest.TestCase):
         self.assertEqual(leer_monto("80"), 80.0)
         with self.assertRaises(ValueError):
             leer_monto("abc")
+        for texto in ("nan", "inf", "-inf", "1e999"):
+            with self.assertRaises(ValueError):
+                leer_monto(texto)
 
     def test_redondear_cercano(self):
         from calculadora.calculo import redondear_cercano
