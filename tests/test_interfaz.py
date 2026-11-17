@@ -146,6 +146,32 @@ class PruebaInterfaz(unittest.TestCase):
         self.assertFalse(app.no_reembolsable.get())
         self.assertEqual(viaje.entrada.valor, "")
 
+    def test_monto_para_reservar(self):
+        app = self.app
+        self.poner_montos(app.filas[0], 1000, 1600, 1700)
+        app.calcular(silencioso=True)
+        self.assertEqual(texto(app.monto_reserva), "$ 1,000.00")  # solo adultos
+        self.poner_personas(2, 1, 0)
+        app.calcular(silencioso=True)
+        self.assertEqual(texto(app.monto_reserva), "$ 1,600.00")  # adultos + niños
+        self.poner_personas(2, 1, 1)
+        app.calcular(silencioso=True)
+        self.assertEqual(texto(app.monto_reserva), "$ 1,700.00")  # todos
+        self.poner_personas(2, 0, 1)
+        app.calcular(silencioso=True)
+        self.assertEqual(texto(app.monto_reserva), "$ 1,700.00")  # adultos + infantes
+        app.limpiar()
+        self.assertEqual(texto(app.monto_reserva), "$ 0.00")
+
+    def test_ventana_novedades_seccion_nuevo(self):
+        antes = len(tk_simulado.WIDGETS)
+        self.app._ventana_novedades({"nuevo": ["Se agregó monto para reservar"], "correcciones": ["Algo"]})
+        textos = [w.kw.get("text") for w in tk_simulado.WIDGETS[antes:]]
+        self.assertIn("Nuevo", textos)
+        self.assertIn("●  Se agregó monto para reservar", textos)
+        self.assertNotIn("Cambios", textos)
+        self.assertLess(textos.index("Nuevo"), textos.index("Correcciones"))
+
     def test_ventana_de_novedades_tras_actualizar(self):
         import tempfile
         from unittest import mock

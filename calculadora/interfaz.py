@@ -790,7 +790,42 @@ class Calculadora:
             self.bloque_fechas, font=Tipo.CIFRA, bg=Color.FONDO, anchor="w", justify="left"
         )
         self.aviso_pago.grid(row=2, column=0, columnspan=3, sticky="w", pady=(px(Espacio.M), 0))
+
+        linea_reserva = tk.Frame(seccion, bg=Color.FONDO)
+        linea_reserva.pack(anchor="w", pady=(px(Espacio.M), 0))
+        tk.Label(
+            linea_reserva, text="Monto para reservar:", font=Tipo.CUERPO_FUERTE,
+            bg=Color.FONDO, fg=Color.TEXTO,
+        ).pack(side="left")
+        self.monto_reserva = tk.Label(
+            linea_reserva, text=dinero(0), font=Tipo.CIFRA, bg=Color.FONDO, fg=Color.TEXTO,
+        )
+        self.monto_reserva.pack(side="left", padx=(px(Espacio.S), 0))
+        self._linea_reserva = linea_reserva
         self._actualizar_pago()
+
+    def monto_para_reservar(self):
+        """Monto de los boletos para todo el grupo: la columna de boletos que suma a
+        todas las personas (adultos; adultos + niños; o adultos + niños + infantes).
+        None si el monto escrito no es válido."""
+        boletos = next((fila for fila in self.filas if fila.base == "BOLETOS NETOS"), None)
+        if boletos is None:
+            return 0.0
+        activos = self.tipos_activos()
+        if INFANTES in activos:
+            clave = CLAVE_ADULTOS_NINOS_INFANTES
+        elif NINOS in activos:
+            clave = CLAVE_ADULTOS_NINOS
+        else:
+            clave = CLAVE_ADULTOS
+        try:
+            return leer_monto(boletos.entradas[clave].get())
+        except ValueError:
+            return None
+
+    def _actualizar_monto_reserva(self):
+        monto = self.monto_para_reservar()
+        self.monto_reserva.config(text="—" if monto is None else dinero(monto))
 
     def _actualizar_pago(self):
         """Fecha de pago: un mes antes del viaje si hay más de un mes entre la cancelación
@@ -799,7 +834,7 @@ class Calculadora:
             self.bloque_fechas.pack_forget()
             self.actualizar_scroll()
             return
-        self.bloque_fechas.pack(fill="x", pady=(px(Espacio.M), 0))
+        self.bloque_fechas.pack(fill="x", pady=(px(Espacio.M), 0), before=self._linea_reserva)
         viaje = self.fechas_pago["viaje"].fecha()
         cancelacion = self.fechas_pago["cancelacion"].fecha()
         if viaje is None or cancelacion is None:
@@ -1139,6 +1174,7 @@ class Calculadora:
 
     def calcular(self, silencioso=False):
         self._calculo_pendiente = None
+        self._actualizar_monto_reserva()
         cantidades = self.cantidades()
         if sum(cantidades.values()) < 1:
             if not silencioso:
@@ -1236,7 +1272,7 @@ class Calculadora:
             cuerpo, text=f"¡Actualización v{VERSION_APP}!", font=Tipo.TITULO_APP,
             bg=Color.FONDO, fg=Color.MARCA,
         ).pack(anchor="w")
-        for clave, titulo, vineta in (("cambios", "Cambios", "-"), ("correcciones", "Correcciones", "•")):
+        for clave, titulo, vineta in novedades.SECCIONES:
             elementos = notas.get(clave) or []
             if not elementos:
                 continue
