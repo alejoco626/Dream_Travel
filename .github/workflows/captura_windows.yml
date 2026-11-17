@@ -1,0 +1,42 @@
+name: Captura en Windows
+
+on:
+  push:
+    branches: ["captura-windows"]
+
+jobs:
+  captura:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pyinstaller
+      - run: >
+          pyinstaller --onefile --windowed --clean
+          --name Calculadora_Dream_Travel
+          --icon icono_calculadora.ico
+          --add-data "icono_calculadora.ico;."
+          --add-data "Logo_Letras_Blanco.png;."
+          --hidden-import win32clipboard
+          calculadora_dream_travel.py
+      - name: Abrir y capturar la pantalla
+        run: |
+          $p = Start-Process dist\Calculadora_Dream_Travel.exe -PassThru
+          Start-Sleep -Seconds 12
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $img = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          $g = [System.Drawing.Graphics]::FromImage($img)
+          $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $img.Save("$PWD\pantalla.png")
+          $ico = [System.Drawing.Icon]::ExtractAssociatedIcon("$PWD\dist\Calculadora_Dream_Travel.exe")
+          $ico.ToBitmap().Save("$PWD\icono_exe.png")
+          Stop-Process -Id $p.Id -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: |
+            pantalla.png
+            icono_exe.png
