@@ -96,6 +96,8 @@ class Comodin:
     def __call__(self, *args, **kwargs):
         return Comodin()
 
+    width = height = 100  # medidas de una imagen simulada
+
 
 class Fuente:
     def __init__(self, *args, **kwargs):
