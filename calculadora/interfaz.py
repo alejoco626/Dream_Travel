@@ -433,6 +433,11 @@ class Calculadora:
         alto = min(px(800), raiz.winfo_screenheight() - px(80))
         raiz.geometry(f"{ancho}x{alto}")
         raiz.minsize(min(px(1000), ancho), min(px(620), alto))
+        # Abre maximizada; al restaurar vuelve al tamaño de arriba.
+        try:
+            raiz.state("zoomed")
+        except tk.TclError:
+            raiz.attributes("-zoomed", True)  # Linux, solo en desarrollo
 
     def _crear_encabezado(self):
         banda = tk.Frame(self.raiz, bg=Color.MARCA, height=px(ALTO_ENCABEZADO))

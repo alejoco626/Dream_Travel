@@ -17,6 +17,10 @@ SECCIONES = (
 )
 
 NOVEDADES = {
+    "1.0.16": {
+        "nuevo": ["Se agregó monto para reservar"],
+        "cambios": ["La calculadora abre en pantalla completa"],
+    },
     "1.0.15": {
         "nuevo": ["Se agregó monto para reservar"],
     },
