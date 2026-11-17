@@ -17,6 +17,9 @@ SECCIONES = (
 )
 
 NOVEDADES = {
+    "1.0.15": {
+        "nuevo": ["Se agregó monto para reservar"],
+    },
     "1.0.14": {
         "nuevo": ["Se agregó monto para reservar"],
     },
