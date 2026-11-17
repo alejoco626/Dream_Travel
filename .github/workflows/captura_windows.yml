@@ -34,6 +34,15 @@ jobs:
           $ico = [System.Drawing.Icon]::ExtractAssociatedIcon("$PWD\dist\Calculadora_Dream_Travel.exe")
           $ico.ToBitmap().Save("$PWD\icono_exe.png")
           Stop-Process -Id $p.Id -Force
+          $chico = New-Object System.Drawing.Bitmap 480, 260
+          $g2 = [System.Drawing.Graphics]::FromImage($chico)
+          $g2.DrawImage($img, (New-Object System.Drawing.Rectangle 0,0,480,260), (New-Object System.Drawing.Rectangle 0,0,480,260), [System.Drawing.GraphicsUnit]::Pixel)
+          $chico.Save("$PWD\esquina.png")
+          $barra = New-Object System.Drawing.Bitmap 400, 60
+          $g3 = [System.Drawing.Graphics]::FromImage($barra)
+          $g3.DrawImage($img, (New-Object System.Drawing.Rectangle 0,0,400,60), (New-Object System.Drawing.Rectangle 0,($b.Height-60),400,60), [System.Drawing.GraphicsUnit]::Pixel)
+          $barra.Save("$PWD\barra.png")
+          foreach ($n in "esquina.png","barra.png","icono_exe.png") { Write-Host "BASE64-$n-INICIO"; [Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\$n")) -split '(.{4000})' | Where-Object { $_ } | ForEach-Object { Write-Host "B64:$_" }; Write-Host "BASE64-$n-FIN" }
       - uses: actions/upload-artifact@v4
         with:
           name: capturas
