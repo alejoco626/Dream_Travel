@@ -6,7 +6,7 @@ import unittest
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 
-from calculadora.config import ID_APP_WINDOWS  # noqa: E402
+from calculadora.config import ID_APP_WINDOWS, NOMBRE_APP  # noqa: E402
 
 
 class PruebaInstalador(unittest.TestCase):
@@ -20,6 +20,12 @@ class PruebaInstalador(unittest.TestCase):
         for acceso in accesos:
             self.assertIn('IconFilename: "{app}\\icono_calculadora.ico"', acceso)
             self.assertIn(f'AppUserModelID: "{ID_APP_WINDOWS}"', acceso)
+
+    def test_nombre_de_la_app(self):
+        self.assertIn(f"AppName={NOMBRE_APP}", self.iss)
+        self.assertIn(f'Name: "{{autoprograms}}\\{NOMBRE_APP}"', self.iss)
+        # los accesos directos con el nombre anterior se borran al actualizar
+        self.assertIn('Name: "{autoprograms}\\Dream & Travel Calculadora.lnk"', self.iss)
 
     def test_el_icono_se_instala_y_no_quedan_iconos_viejos(self):
         self.assertIn('Source: "icono_calculadora.ico"', self.iss)

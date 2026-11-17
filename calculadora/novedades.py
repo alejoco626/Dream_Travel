@@ -10,6 +10,10 @@ import os
 from .actualizador import es_mas_nueva
 
 NOVEDADES = {
+    "1.0.13": {
+        "cambios": ["La app ahora se llama Calculadora de viajes D&T"],
+        "correcciones": ["El ícono de la ventana y el logo del encabezado se ven completos"],
+    },
     "1.0.12": {
         "cambios": [],
         "correcciones": ["Se cambiaron los parámetros de edad de niños e infantes"],

@@ -6,6 +6,7 @@ import tempfile
 # --- Versión y actualizaciones -------------------------------------------
 # El workflow de GitHub reescribe esta línea con la etiqueta de la versión.
 VERSION_APP = "1.0.0"
+NOMBRE_APP = "Calculadora de viajes D&T"
 
 REPO_GITHUB = "alejoco626/Dream_Travel"
 NOMBRE_INSTALADOR = "Calculadora_Dream_Travel_Setup.exe"

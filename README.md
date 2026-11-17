@@ -1,4 +1,4 @@
-# Calculadora Dream & Travel
+# Calculadora de viajes D&T
 
 Aplicación de escritorio (Windows) para armar presupuestos de viaje para adultos,
 niños e infantes. Calcula el PVP por persona, el precio con descuento por pago

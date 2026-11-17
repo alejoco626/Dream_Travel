@@ -5,7 +5,7 @@
 [Setup]
 ; Este identificador NO debe cambiar nunca: es lo que permite que cada version nueva reemplace a la anterior.
 AppId={{5727CCB4-70EA-45AD-A938-C707C8C610DA}
-AppName=Dream & Travel Calculadora
+AppName=Calculadora de viajes D&T
 AppVersion={#AppVersion}
 AppPublisher=Dream & Travel
 DefaultDirName={autopf}\Dream Travel Calculadora
@@ -39,13 +39,16 @@ Source: "icono_calculadora.ico"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 ; AppUserModelID debe coincidir con el que usa el programa (config.ID_APP_WINDOWS): asi la ventana,
 ; el menu Inicio y lo que se ancle a la barra de tareas son la misma app y usan el mismo icono.
-Name: "{autoprograms}\Dream & Travel Calculadora"; Filename: "{app}\Calculadora_Dream_Travel.exe"; IconFilename: "{app}\icono_calculadora.ico"; AppUserModelID: "DreamTravel.Calculadora"
-Name: "{autodesktop}\Dream & Travel Calculadora"; Filename: "{app}\Calculadora_Dream_Travel.exe"; IconFilename: "{app}\icono_calculadora.ico"; AppUserModelID: "DreamTravel.Calculadora"; Tasks: desktopicon
+Name: "{autoprograms}\Calculadora de viajes D&T"; Filename: "{app}\Calculadora_Dream_Travel.exe"; IconFilename: "{app}\icono_calculadora.ico"; AppUserModelID: "DreamTravel.Calculadora"
+Name: "{autodesktop}\Calculadora de viajes D&T"; Filename: "{app}\Calculadora_Dream_Travel.exe"; IconFilename: "{app}\icono_calculadora.ico"; AppUserModelID: "DreamTravel.Calculadora"; Tasks: desktopicon
 
 [InstallDelete]
 ; Limpia restos de versiones anteriores antes de copiar la nueva.
 Type: files; Name: "{app}\Calculadora_Dream_Travel*.exe"
 Type: filesandordirs; Name: "{app}\_internal"
+; Accesos directos con el nombre anterior de la app.
+Type: files; Name: "{autoprograms}\Dream & Travel Calculadora.lnk"
+Type: files; Name: "{autodesktop}\Dream & Travel Calculadora.lnk"
 
 [Run]
 ; Instalacion normal: pregunta si abrir el programa al terminar.

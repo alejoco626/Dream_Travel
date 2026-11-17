@@ -32,6 +32,7 @@ from .config import (
     CLAVES_MONTO,
     EDADES_TIPO,
     ID_APP_WINDOWS,
+    NOMBRE_APP,
     INFANTES,
     MODO_CAPTURA,
     MODO_PERSONA,
@@ -396,7 +397,7 @@ class Calculadora:
         # default= aplica el ícono también a las ventanas secundarias (diálogos).
         # No combinar con iconphoto: en Windows, usar los dos deja un ícono roto.
         raiz.iconbitmap(default=ruta_recurso("icono_calculadora.ico"))
-        raiz.title("Dream & Travel - Calculadora")
+        raiz.title(NOMBRE_APP)
         raiz.configure(bg=Color.LIENZO)
         estilo = ttk.Style(raiz)
         estilo.theme_use("clam")
