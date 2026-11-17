@@ -2,7 +2,7 @@
 
 Aplicación de escritorio (Windows) para armar presupuestos de viaje para adultos,
 niños e infantes. Calcula el PVP por persona, el precio con descuento por pago
-único en efectivo, el total en dólares y quetzales, y la fecha de pago y el **Monto para reservar** (el monto de boletos de todo el grupo).
+único en efectivo, el total en dólares y quetzales, la fecha de pago y el monto para reservar.
 
 ## Uso
 
