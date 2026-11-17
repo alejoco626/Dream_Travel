@@ -51,6 +51,8 @@ from .config import (
 from .tema import Color, Espacio, Tipo, configurar_escala, px
 
 TITULO_PRESUPUESTO = "PRESUPUESTO PARA ADULTOS Y NIÑOS F1"
+ALTO_ENCABEZADO = 84
+ALTO_LOGO = 68  # deja aire arriba y abajo dentro del encabezado
 MONTO_VACIO = "$ 0.00"
 
 RETARDO_CALCULO_MS = 250
@@ -75,21 +77,13 @@ def ruta_recurso(nombre):
     return os.path.join(base, nombre)
 
 
-def iconos_de_archivo(ruta):
-    """Cada tamaño del .ico como imagen de Tk, del más grande al más chico."""
+def logo_ajustado(ruta, alto):
+    """El logo escalado con suavizado para que quepa completo en el encabezado."""
     from PIL import Image, ImageTk
 
-    try:
-        icono = Image.open(ruta)
-        tamanos = sorted(icono.info.get("sizes", ()), reverse=True)
-        imagenes = []
-        for tamano in tamanos:
-            icono.size = tamano
-            icono.load()
-            imagenes.append(ImageTk.PhotoImage(icono.copy()))
-        return imagenes
-    except (OSError, ValueError, AttributeError, TypeError, tk.TclError):
-        return []
+    imagen = Image.open(ruta).convert("RGBA")
+    ancho = max(1, round(imagen.width * alto / imagen.height))
+    return ImageTk.PhotoImage(imagen.resize((ancho, alto), Image.LANCZOS))
 
 
 def activar_dpi():
@@ -399,14 +393,9 @@ class Calculadora:
     # ------------------------------------------------------------ estructura
     def _configurar_ventana(self):
         raiz = self.raiz
-        ruta_icono = ruta_recurso("icono_calculadora.ico")
         # default= aplica el ícono también a las ventanas secundarias (diálogos).
-        raiz.iconbitmap(default=ruta_icono)
-        # Además se entregan todos los tamaños como imágenes para que la barra de tareas
-        # y la ventana usen el que corresponde a la escala de pantalla, sin pixelarse.
-        self._iconos = iconos_de_archivo(ruta_icono)
-        if self._iconos:
-            raiz.iconphoto(True, *self._iconos)
+        # No combinar con iconphoto: en Windows, usar los dos deja un ícono roto.
+        raiz.iconbitmap(default=ruta_recurso("icono_calculadora.ico"))
         raiz.title("Dream & Travel - Calculadora")
         raiz.configure(bg=Color.LIENZO)
         estilo = ttk.Style(raiz)
@@ -445,11 +434,11 @@ class Calculadora:
         raiz.minsize(min(px(1000), ancho), min(px(620), alto))
 
     def _crear_encabezado(self):
-        banda = tk.Frame(self.raiz, bg=Color.MARCA, height=px(84))
+        banda = tk.Frame(self.raiz, bg=Color.MARCA, height=px(ALTO_ENCABEZADO))
         banda.pack(fill="x")
         banda.pack_propagate(False)
 
-        self._logo = tk.PhotoImage(file=ruta_recurso("Logo_Letras_Blanco.png")).subsample(3, 3)
+        self._logo = logo_ajustado(ruta_recurso("Logo_Letras_Blanco.png"), px(ALTO_LOGO))
         tk.Label(banda, image=self._logo, bg=Color.MARCA).place(
             x=px(Espacio.XL), rely=0.5, anchor="w"
         )

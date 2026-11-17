@@ -21,23 +21,6 @@ jobs:
           --add-data "Logo_Letras_Blanco.png;."
           --hidden-import win32clipboard
           calculadora_dream_travel.py
-      - name: Probar formas de poner el icono
-        run: |
-          $i = 0
-          foreach ($m in "bitmap","foto","ambos","foto256") { Start-Process python -ArgumentList "prueba_icono.py",$m,$i; $i++ }
-          Start-Sleep -Seconds 10
-          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-          $img = New-Object System.Drawing.Bitmap 1024, 200
-          $g = [System.Drawing.Graphics]::FromImage($img)
-          $g.CopyFromScreen(0, 0, 0, 0, (New-Object System.Drawing.Size 1024, 200))
-          $img.Save("$PWD\modos.png")
-          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-          $t = New-Object System.Drawing.Bitmap 600, 50
-          $g2 = [System.Drawing.Graphics]::FromImage($t)
-          $g2.CopyFromScreen(0, $b.Height-50, 0, 0, (New-Object System.Drawing.Size 600, 50))
-          $t.Save("$PWD\modos_barra.png")
-          foreach ($n in "modos.png","modos_barra.png") { Write-Host "BASE64-$n-INICIO"; [Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\$n")) -split '(.{4000})' | Where-Object { $_ } | ForEach-Object { Write-Host "B64:$_" }; Write-Host "BASE64-$n-FIN" }
-          Start-Sleep -Seconds 16
       - name: Abrir y capturar la pantalla
         run: |
           $p = Start-Process dist\Calculadora_Dream_Travel.exe -PassThru
