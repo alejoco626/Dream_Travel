@@ -1,0 +1,42 @@
+name: Descargar recursos web
+
+on:
+  push:
+    branches:
+      - recursos-web
+
+permissions:
+  contents: write
+
+jobs:
+  descargar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Descargar html2canvas y la fuente Inter
+        run: |
+          set -e
+          mkdir -p tmp vendor
+          cd tmp
+          npm pack html2canvas@1.4.1 @fontsource-variable/inter@5.1.1 --silent
+          for f in *.tgz; do mkdir -p "${f%.tgz}"; tar -xzf "$f" -C "${f%.tgz}"; done
+          ls -R | head -80
+          cd ..
+          cp tmp/html2canvas-1.4.1/package/dist/html2canvas.min.js vendor/
+          cp tmp/html2canvas-1.4.1/package/LICENSE vendor/html2canvas.LICENSE
+          INTER=tmp/fontsource-variable-inter-5.1.1/package
+          cp $INTER/files/inter-latin-wght-normal.woff2 vendor/inter-latin.woff2
+          cp $INTER/files/inter-latin-ext-wght-normal.woff2 vendor/inter-latin-ext.woff2
+          cp $INTER/LICENSE vendor/inter.LICENSE
+          ls -la vendor
+          sha256sum vendor/*
+      - name: Guardar en la rama
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add vendor
+          git commit -m "Recursos web descargados"
+          git push
