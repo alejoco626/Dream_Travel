@@ -221,3 +221,6 @@ __marimo__/
 
 # Instalador de Inno Setup
 Output/
+
+# Vista previa en el navegador
+captura_vista_previa.png

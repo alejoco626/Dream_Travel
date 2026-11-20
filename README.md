@@ -13,8 +13,9 @@ niños e infantes. Calcula el PVP por persona, el precio con descuento por pago
    la de cancelación del hotel (dd/mm/aaaa, o con el calendario 📅) para ver la fecha de pago y el **Monto para reservar** (el precio de los boletos de todo el grupo, ya dividido entre 0.80).
 4. El panel derecho se actualiza mientras escribes: **Por persona**, **Resumen** y el
    **Ajuste de precio adulto**. *Redondear* lleva los precios al entero más próximo.
-5. **Ver desglose** muestra el detalle por servicio y 📷 copia una captura de toda la
-   calculadora al portapapeles.
+5. **Ver desglose** muestra el detalle por servicio y el botón de la cámara copia una captura
+   de toda la calculadora al portapapeles. *PVP con descuento* muestra también el precio
+   con descuento por pago en efectivo.
 
 Atajos: `Enter` pasa al siguiente campo · `Ctrl + Enter` calcula.
 
@@ -23,26 +24,35 @@ Si la calculadora no abre, el detalle del error queda en
 
 ## Desarrollo
 
+La ventana es una página web (HTML, CSS y JavaScript) que se muestra con
+[pywebview](https://pywebview.flowrl.com/); todos los cálculos se hacen en Python.
+
 ```bash
 pip install -r requirements.txt
-python calculadora_dream_travel.py           # abrir la aplicación
+python calculadora_dream_travel.py           # abrir la aplicación (Windows)
+python herramientas/vista_previa.py          # ver la página en el navegador: http://127.0.0.1:8765
 python -m unittest discover -s tests -t .    # pruebas (no requieren pantalla)
 ```
+
+La vista previa sirve para cambiar el diseño sin compilar: edita los archivos de
+`calculadora/web/` y recarga el navegador.
 
 | Archivo | Contenido |
 | --- | --- |
 | `calculadora_dream_travel.py` | Punto de entrada |
+| `calculadora/aplicacion.py` | Abre la ventana con pywebview |
+| `calculadora/api.py` | Lo que la página le pide a Python: cálculos, formatos, captura, actualización |
 | `calculadora/config.py` | Versión, porcentajes de costo, tipo de cambio y servicios |
-| `calculadora/calculo.py` | Fórmulas del presupuesto y redondeo, sin interfaz |
+| `calculadora/calculo.py` | Fórmulas del presupuesto y redondeo |
 | `calculadora/fechas.py` | Fechas dd/mm/aaaa y cálculo de la fecha de pago |
-| `calculadora/tema.py` | Colores, tipografía, espaciado y radios |
-| `calculadora/componentes.py` | Tarjetas, campos, botones, calendario y textos de ayuda |
-| `calculadora/interfaz.py` | Ventana principal |
 | `calculadora/actualizador.py` | Actualización automática desde GitHub Releases |
 | `calculadora/novedades.py` | Notas que se muestran después de cada actualización |
-| `calculadora/captura.py` | Captura de pantalla al portapapeles |
+| `calculadora/web/index.html` | Estructura de la pantalla |
+| `calculadora/web/estilos.css` | Colores, tipografía, espacios y animaciones |
+| `calculadora/web/app.js` | Comportamiento de la pantalla (muestra lo que calcula Python) |
+| `calculadora/web/vendor/` | html2canvas (captura) y la fuente Inter, con sus licencias |
+| `herramientas/vista_previa.py` | Vista previa en el navegador, sin pywebview |
 | `icono_calculadora.ico` | Ícono de la app (16 a 256 px) |
-| `Logo_Letras_Blanco.png` | Logo del encabezado |
 | `instalador.iss` | Instalador de Inno Setup |
 | `poner_version.py` | Escribe la versión del release en `config.py` |
 | `tests/` | Pruebas automáticas |
