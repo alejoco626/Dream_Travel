@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Calculadora de viajes D&amp;T</title>
+    <link rel="stylesheet" href="estilos.css" />
+  </head>
+  <body>
+    <!-- Íconos (se reutilizan con <use>) -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-mas" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-menos" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol>
+      <symbol id="i-cerrar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></symbol>
+      <symbol id="i-flecha" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></symbol>
+      <symbol id="i-flecha-izq" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></symbol>
+      <symbol id="i-calendario" viewBox="0 0 24 24">
+        <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+        <path d="M3.5 10h17M8 3v4M16 3v4" />
+      </symbol>
+      <symbol id="i-camara" viewBox="0 0 24 24">
+        <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.4-2h4.6l1.4 2h1.8A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" />
+        <circle cx="12" cy="12.5" r="3.5" />
+      </symbol>
+      <symbol id="i-alerta" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" />
+      </symbol>
+    </svg>
+
+    <div id="app" class="app cargando">
+      <header class="banda">
+        <img class="logo" src="img/logo.png" alt="Dream &amp; Travel" />
+        <h1 id="titulo">PRESUPUESTO PARA ADULTOS Y NIÑOS F1</h1>
+        <div class="reloj">
+          <span class="fecha" id="fecha"></span>
+          <span class="hora" id="hora"></span>
+        </div>
+      </header>
+
+      <main class="cuerpo">
+        <div class="principal" id="principal">
+          <!-- PERSONAS -->
+          <section class="tarjeta" aria-labelledby="t-personas">
+            <div class="cabeza-seccion"><h2 class="titulo-seccion" id="t-personas">PERSONAS</h2></div>
+            <div class="esqueleto">
+              <div class="barra-esqueleto alta" style="width: 70%"></div>
+            </div>
+            <div class="contenido personas" id="personas"></div>
+          </section>
+
+          <!-- SERVICIOS -->
+          <section class="tarjeta" aria-labelledby="t-servicios">
+            <div class="cabeza-seccion">
+              <h2 class="titulo-seccion" id="t-servicios">SERVICIOS</h2>
+              <span class="nota">
+                Escribe el monto total de cada grupo · Diseñador: precio por persona · En
+                Misceláneos marca la casilla para incluir niños o infantes
+              </span>
+            </div>
+            <div class="esqueleto">
+              <div class="barra-esqueleto" style="width: 100%"></div>
+              <div class="barra-esqueleto alta" style="width: 100%"></div>
+              <div class="barra-esqueleto alta" style="width: 100%"></div>
+              <div class="barra-esqueleto alta" style="width: 22%"></div>
+            </div>
+            <div class="contenido">
+              <div class="tabla-servicios" id="tabla-servicios">
+                <div class="encabezado-servicios" id="encabezado-servicios">
+                  <div>Servicio</div>
+                  <div data-clave="adultos">Adultos</div>
+                  <div data-clave="adultos_ninos" class="col-ninos">Adultos + niños</div>
+                  <div data-clave="adultos_ninos_infantes" class="col-infantes" id="enc-combinado">
+                    Adultos + niños + infantes
+                  </div>
+                  <div></div>
+                </div>
+                <div class="cuerpo-servicios" id="cuerpo-servicios"></div>
+              </div>
+              <div class="acciones-servicios">
+                <button class="boton suave" id="agregar-servicio" type="button">
+                  <svg class="icono"><use href="#i-mas" /></svg>Agregar servicio
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- CONDICIONES DE PAGO -->
+          <section class="tarjeta" aria-labelledby="t-pago">
+            <div class="cabeza-seccion"><h2 class="titulo-seccion" id="t-pago">CONDICIONES DE PAGO</h2></div>
+            <div class="esqueleto">
+              <div class="barra-esqueleto" style="width: 20%"></div>
+              <div class="barra-esqueleto alta" style="width: 50%"></div>
+            </div>
+            <div class="contenido">
+              <label class="casilla">
+                <input type="checkbox" class="oculto-accesible" id="no-reembolsable" />
+                <span class="caja"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+                No reembolsable
+              </label>
+              <div class="plegable" id="bloque-fechas">
+                <div class="interior">
+                  <div class="fechas">
+                    <div class="fecha-campo">
+                      <label for="fecha-viaje">Fecha de viaje</label>
+                      <div class="grupo">
+                        <input class="campo" id="fecha-viaje" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" />
+                        <button class="boton-icono" type="button" data-calendario="fecha-viaje" data-ayuda="Elegir en el calendario">
+                          <svg class="icono"><use href="#i-calendario" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="fecha-campo">
+                      <label for="fecha-cancelacion">Fecha de cancelación del hotel</label>
+                      <div class="grupo">
+                        <input class="campo" id="fecha-cancelacion" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" />
+                        <button class="boton-icono" type="button" data-calendario="fecha-cancelacion" data-ayuda="Elegir en el calendario">
+                          <svg class="icono"><use href="#i-calendario" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="aviso-pago neutro" id="aviso-pago">Escribe las dos fechas para ver la fecha de pago.</div>
+                </div>
+              </div>
+              <div class="reserva">
+                <span class="etiqueta">Monto para reservar:</span>
+                <span class="valor" id="monto-reserva">$ 0.00</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- DESGLOSE -->
+          <section class="tarjeta" aria-labelledby="t-desglose">
+            <div class="cabeza-seccion"><h2 class="titulo-seccion" id="t-desglose">DESGLOSE</h2></div>
+            <div class="esqueleto"><div class="barra-esqueleto" style="width: 16%"></div></div>
+            <div class="contenido">
+              <button class="boton enlace boton-desglose" id="boton-desglose" type="button" aria-expanded="false">
+                <svg class="icono"><use href="#i-flecha" /></svg><span>Ver desglose</span>
+              </button>
+              <div class="plegable cerrado" id="bloque-desglose">
+                <div class="interior" id="contenido-desglose"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- PANEL DE RESULTADOS -->
+        <aside class="tarjeta panel" id="panel">
+          <h2 class="titulo-seccion">POR PERSONA</h2>
+          <div class="opciones-panel">
+            <label class="interruptor" data-ayuda="Redondea cada precio al entero más próximo (50.49 → 50, 50.50 → 51)">
+              <input type="checkbox" class="oculto-accesible" id="redondear" checked />
+              <span class="riel"></span>Redondear
+            </label>
+            <label class="interruptor" data-ayuda="Muestra también el precio con descuento por pago único en efectivo">
+              <input type="checkbox" class="oculto-accesible" id="con-descuento" />
+              <span class="riel"></span>PVP con descuento
+            </label>
+          </div>
+          <div class="esqueleto">
+            <div class="barra-esqueleto" style="width: 90%"></div>
+            <div class="barra-esqueleto" style="width: 70%"></div>
+            <div class="barra-esqueleto" style="width: 80%"></div>
+            <div class="barra-esqueleto" style="width: 60%"></div>
+          </div>
+          <div class="contenido">
+            <div class="por-persona" id="por-persona"></div>
+
+            <div class="divisor"></div>
+            <h2 class="titulo-seccion">RESUMEN</h2>
+            <div class="resumen-totales">
+              <div>
+                <div class="etiqueta">Total PVP</div>
+                <div class="cifra" id="total-pvp">$ 0.00</div>
+                <div class="secundario" id="total-pvp-q">Q 0.00</div>
+              </div>
+              <div class="col-desc">
+                <div class="bloque-descuento">
+                  <div class="etiqueta">Con descuento · efectivo</div>
+                  <div class="cifra" id="total-descuento">$ 0.00</div>
+                  <div class="secundario" id="total-descuento-q">Q 0.00</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="divisor"></div>
+            <h2 class="titulo-seccion">AJUSTE DE PRECIO ADULTO</h2>
+            <div class="ajuste">
+              <span>Precio adulto actual</span>
+              <span class="valor" id="ajuste-actual">$ 0.00</span>
+              <label for="ajuste-nuevo">Precio adulto nuevo</label>
+              <input class="campo monto" id="ajuste-nuevo" autocomplete="off" data-ayuda="Escribe el precio por adulto que quieres ofrecer" />
+              <strong>Diferencia total</strong>
+              <span class="diferencia" id="ajuste-diferencia">—</span>
+            </div>
+          </div>
+
+          <div class="botones-panel">
+            <button class="boton primario" id="boton-calcular" type="button" data-ayuda="Ctrl + Enter">Calcular</button>
+            <button class="boton peligro" id="boton-limpiar" type="button">Limpiar</button>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="pie">
+        Los datos ingresados son temporales y no se almacenan permanentemente. ·
+        Versión <span id="version"></span>
+        <button class="boton-captura" id="boton-captura" type="button" data-ayuda="Copiar captura de toda la calculadora" aria-label="Copiar captura de toda la calculadora">
+          <svg class="icono"><use href="#i-camara" /></svg>
+        </button>
+      </footer>
+    </div>
+
+    <div class="avisos" id="avisos" aria-live="polite"></div>
+    <div class="ayuda" id="ayuda" role="tooltip"></div>
+
+    <script src="vendor/html2canvas.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

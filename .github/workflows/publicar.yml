@@ -36,7 +36,8 @@ jobs:
           --name Calculadora_Dream_Travel
           --icon icono_calculadora.ico
           --add-data "icono_calculadora.ico;."
-          --add-data "Logo_Letras_Blanco.png;."
+          --add-data "calculadora/web;calculadora/web"
+          --collect-all webview
           --hidden-import win32clipboard
           calculadora_dream_travel.py
 

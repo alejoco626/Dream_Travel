@@ -17,6 +17,12 @@ SECCIONES = (
 )
 
 NOVEDADES = {
+    "1.0.17": {
+        "nuevo": [
+            "Nuevo diseño de la calculadora, más claro y con animaciones",
+            "Se agregó la opción PVP con descuento",
+        ],
+    },
     "1.0.16": {
         "nuevo": ["Se agregó monto para reservar"],
         "cambios": ["La calculadora abre en pantalla completa"],
