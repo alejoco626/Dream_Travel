@@ -517,15 +517,17 @@ svg.icono {
 
 /* ---------------------------------------------------------------- servicios */
 .tabla-servicios {
-  --columnas: minmax(190px, 1fr) repeat(3, 180px) 40px;
+  --col-nombre: minmax(190px, 1fr);
+  --col-monto: 180px;
+  --columnas: var(--col-nombre) repeat(3, var(--col-monto)) 40px;
   overflow-x: auto;
 }
 .tabla-servicios.sin-ninos,
 .tabla-servicios.sin-infantes {
-  --columnas: minmax(190px, 1fr) repeat(2, 180px) 40px;
+  --columnas: var(--col-nombre) repeat(2, var(--col-monto)) 40px;
 }
 .tabla-servicios.sin-ninos.sin-infantes {
-  --columnas: minmax(190px, 1fr) 180px 40px;
+  --columnas: var(--col-nombre) var(--col-monto) 40px;
 }
 .tabla-servicios.sin-ninos .col-ninos,
 .tabla-servicios.sin-infantes .col-infantes {
@@ -536,7 +538,6 @@ svg.icono {
   display: grid;
   grid-template-columns: var(--columnas);
   align-items: center;
-  min-width: max-content;
 }
 .encabezado-servicios > div {
   font-size: 12px;
@@ -1339,6 +1340,24 @@ svg.icono {
 
 /* Ventanas angostas: el nombre de cada tipo de persona va arriba de su contador */
 @media (max-width: 1180px) {
+  .tabla-servicios {
+    --col-nombre: minmax(120px, 1fr);
+    --col-monto: 132px;
+  }
+  .tabla-servicios .campo.monto {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 14px;
+    padding: 0 8px;
+  }
+  .encabezado-servicios > div {
+    white-space: normal;
+  }
+  .selector {
+    min-width: 0;
+    width: 100%;
+  }
   .personas {
     gap: 24px;
   }
