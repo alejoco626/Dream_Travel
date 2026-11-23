@@ -98,12 +98,23 @@ def costos_repartidos(total, tipos_incluidos, cantidades):
 def costos_por_tipo(servicio, cantidades):
     """Reparte el costo del servicio entre adultos, niños e infantes.
 
-    Los montos son acumulados: el costo de los niños es (adultos + niños) - adultos
-    y el de los infantes es (adultos + niños + infantes) - (adultos + niños).
+    Con "Repartir monto" divide el total por pesos. Si no, resta las cotizaciones
+    acumuladas (ver costos_cotizados). Un costo negativo no puede ser un precio: si la
+    cotización con más personas salió más barata que la anterior, se toma 0 (la página
+    lo avisa).
     """
     if servicio.modo == MODO_REPARTO:
         return costos_repartidos(servicio.montos[CLAVE_TOTAL], servicio.tipos_incluidos, cantidades)
+    return {tipo: max(0.0, costo) for tipo, costo in costos_cotizados(servicio, cantidades).items()}
 
+
+def costos_cotizados(servicio, cantidades):
+    """Costos tal como salen de restar las cotizaciones acumuladas (pueden ser negativos).
+
+    Los montos son acumulados: el costo de los niños es (adultos + niños) - adultos
+    y el de los infantes es (adultos + niños + infantes) - (adultos + niños). En el
+    Diseñador cada monto es por persona y se multiplica por las personas de ese grupo.
+    """
     adultos = cantidades[ADULTOS]
     ninos = cantidades[NINOS] if NINOS in servicio.tipos_incluidos else 0
     infantes = cantidades[INFANTES] if INFANTES in servicio.tipos_incluidos else 0
@@ -124,14 +135,11 @@ def costos_por_tipo(servicio, cantidades):
     else:
         base_combinada = base_adultos_ninos
 
-    costos = {
+    return {
         ADULTOS: base_adultos,
         NINOS: (base_adultos_ninos - base_adultos) if ninos else 0.0,
         INFANTES: (base_combinada - base_adultos_ninos) if infantes else 0.0,
     }
-    if por_persona and costos[INFANTES] <= 0:
-        costos[INFANTES] = 0.0
-    return costos
 
 
 def calcular_presupuesto(servicios, cantidades):
@@ -206,7 +214,8 @@ def precios_por_persona(presupuesto, cantidades, redondear):
     for tipo in TIPOS_PERSONA:
         numero = cantidades[tipo]
         pvp = ajustar(presupuesto.pvp_persona[tipo])
-        descuento = ajustar(presupuesto.descuento_persona[tipo])
+        # Con redondeo, el descuento sale del PVP que se ve (PVP redondeado / 1.05).
+        descuento = ajustar(pvp / DIVISOR_DESCUENTO_EFECTIVO) if redondear else presupuesto.descuento_persona[tipo]
         precios.pvp[tipo] = pvp
         precios.descuento[tipo] = descuento
         precios.pvp_q[tipo] = ajustar(pvp * TIPO_CAMBIO_GTQ)

@@ -739,8 +739,35 @@
     poner($("#ajuste-actual"), resultado.ajuste.actual);
     poner($("#ajuste-diferencia"), resultado.ajuste.diferencia);
     (resultado.reparto || []).forEach((valores, indice) => dibujarReparto(filas[indice], valores));
+    dibujarAvisos(resultado.avisos || []);
     medirDescuento();
     dibujarDesglose(resultado.desglose);
+  }
+
+  /** Franja amarilla debajo del servicio con una cotización atípica. */
+  function dibujarAvisos(avisos) {
+    const nuevos = new Map(avisos.map((aviso) => [filas[aviso.fila], aviso]));
+    filas.forEach((fila) => {
+      const aviso = nuevos.get(fila);
+      const actual = fila.elemento.nextElementSibling;
+      const tiene = actual && actual.classList.contains("aviso-fila") ? actual : null;
+      Object.values(fila.entradas).forEach((entrada) =>
+        entrada.classList.toggle("alerta", Boolean(aviso) && entrada.dataset.clave === aviso.clave)
+      );
+      if (!aviso) {
+        if (tiene) tiene.remove();
+        return;
+      }
+      const franja = tiene || crear(`<div class="aviso-fila" role="status">${icono("i-alerta")}<span></span></div>`);
+      texto($("span", franja), aviso.mensaje);
+      if (!tiene) fila.elemento.after(franja);
+    });
+    $$("#cuerpo-servicios .aviso-fila").forEach((franja) => {
+      const anterior = franja.previousElementSibling;
+      if (!anterior || !filas.some((fila) => fila.elemento === anterior) || !nuevos.has(filas.find((f) => f.elemento === anterior))) {
+        franja.remove();
+      }
+    });
   }
 
   function dibujarReparto(fila, valores) {

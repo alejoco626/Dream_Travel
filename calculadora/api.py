@@ -21,6 +21,7 @@ from datetime import datetime
 from . import actualizador, fechas, novedades
 from .calculo import (
     CLAVE_TOTAL,
+    costos_cotizados,
     ServicioCapturado,
     calcular_presupuesto,
     diferencia_total,
@@ -302,6 +303,7 @@ def calcular_estado(estado):
             return resultado
 
     presupuesto = calcular_presupuesto(capturados, cantidades)
+    resultado["avisos"] = avisos_de_cotizacion(capturados, cantidades)
     precios = precios_por_persona(presupuesto, cantidades, redondear)
 
     resultado["por_persona"] = {
@@ -326,6 +328,54 @@ def calcular_estado(estado):
     resultado["desglose"] = filas_desglose(presupuesto)
     resultado["reparto"] = reparto_por_servicio(presupuesto)
     return resultado
+
+
+NOMBRES_AVISO = {
+    ADULTOS: ("adulto", "adultos"),
+    NINOS: ("niño", "niños"),
+    INFANTES: ("infante", "infantes"),
+}
+COLUMNA_DE_TIPO = {NINOS: CLAVE_ADULTOS_NINOS, INFANTES: CLAVE_ADULTOS_NINOS_INFANTES}
+
+
+def avisos_de_cotizacion(capturados, cantidades):
+    """Cotizaciones atípicas al restar (sin "Repartir monto"): una cotización con más
+    personas que sale más barata que la anterior, o un menor que paga más que un mayor."""
+    avisos = []
+    for indice, servicio in enumerate(capturados):
+        if servicio.modo == MODO_REPARTO:
+            continue
+        crudos = costos_cotizados(servicio, cantidades)
+        tipos = [t for t in TIPOS_PERSONA if t in servicio.tipos_incluidos and cantidades.get(t, 0) > 0]
+        negativos = [t for t in tipos if crudos[t] < -0.005]
+        mensaje = tipo_marcado = None
+        if negativos:
+            tipo_marcado = negativos[0]
+            plural = NOMBRES_AVISO[tipo_marcado][1]
+            mensaje = (
+                f"En {servicio.nombre}, la cotización con {plural} salió más baja que la anterior: "
+                f"se tomó $ 0.00 para los {plural}."
+            )
+        else:
+            por_persona = {t: crudos[t] / cantidades[t] for t in tipos}
+            for mayor, menor in ((ADULTOS, NINOS), (NINOS, INFANTES), (ADULTOS, INFANTES)):
+                if mayor in por_persona and menor in por_persona and por_persona[menor] > por_persona[mayor] + 0.005:
+                    tipo_marcado = menor
+                    mensaje = (
+                        f"En {servicio.nombre}, a cada {NOMBRES_AVISO[menor][0]} le toca "
+                        f"{dinero(por_persona[menor])} y a cada {NOMBRES_AVISO[mayor][0]} "
+                        f"{dinero(por_persona[mayor])}."
+                    )
+                    break
+        if mensaje:
+            avisos.append(
+                {
+                    "fila": indice,
+                    "clave": COLUMNA_DE_TIPO.get(tipo_marcado, CLAVE_ADULTOS),
+                    "mensaje": f"{mensaje} Revisa las cotizaciones o enciende Repartir monto.",
+                }
+            )
+    return avisos
 
 
 def reparto_por_servicio(presupuesto):

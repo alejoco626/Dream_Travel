@@ -150,6 +150,38 @@ class PruebaCalculo(unittest.TestCase):
         grupo = api.calcular_estado(estado)["desglose"]["grupos"][0]
         self.assertEqual(grupo["nombre"], "Misceláneos")  # solo se aceptan subtipos de la lista
 
+    def test_cotizacion_que_baja_no_da_precios_negativos(self):
+        # Diseñador: $491 por persona para 3 adultos y $250 para los 5 -> niños -$223
+        estado = escenario(
+            personas={"ADULTOS": "3", "NIÑOS": "2", "INFANTES": "0"},
+            servicios=[servicio("DISEÑADOR", 491, 250, 0), servicio("BOLETOS NETOS", 1000, 900, 0)],
+        )
+        resultado = api.calcular_estado(estado)
+        self.assertEqual(resultado["por_persona"]["NIÑOS"]["pvp"], "$ 0.00")
+        self.assertEqual([a["fila"] for a in resultado["avisos"]], [0, 1])
+        self.assertEqual(resultado["avisos"][0]["clave"], "adultos_ninos")
+        self.assertIn("salió más baja", resultado["avisos"][0]["mensaje"])
+
+    def test_aviso_si_un_menor_paga_mas(self):
+        estado = escenario(
+            personas={"ADULTOS": "3", "NIÑOS": "2", "INFANTES": "0"},
+            servicios=[servicio("BOLETOS NETOS", 1547, 2522, 0), servicio("DISEÑADOR", 491, 819, 0)],
+        )
+        avisos = api.calcular_estado(estado)["avisos"]
+        self.assertEqual(len(avisos), 1)
+        self.assertIn("a cada niño le toca $ 1,311.00 y a cada adulto $ 491.00", avisos[0]["mensaje"])
+        normal = escenario(servicios=[servicio("BOLETOS NETOS", 1000, 1400, 1450), servicio("DISEÑADOR", 300, 250, 210)])
+        self.assertEqual(api.calcular_estado(normal)["avisos"], [])  # el caso normal no avisa
+
+    def test_descuento_sale_del_pvp_redondeado(self):
+        for redondear in (True, False):
+            resultado = api.calcular_estado(escenario(redondear=redondear))
+            for valores in resultado["por_persona"].values():
+                pvp = float(valores["pvp"][2:].replace(",", ""))
+                descuento = float(valores["descuento"][2:].replace(",", ""))
+                esperado = round(pvp / 1.05) if redondear else pvp / 1.05
+                self.assertAlmostEqual(descuento, esperado, delta=0.006)
+
     def test_formatear_monto(self):
         self.assertEqual(api.formatear_monto("1000"), {"valido": True, "texto": "$ 1,000.00"})
         self.assertEqual(api.formatear_monto(""), {"valido": True, "texto": "$ 0.00"})

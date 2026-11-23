@@ -549,6 +549,31 @@ svg.icono {
   text-align: right;
   transition: background-color var(--rapido) ease, color var(--rapido) ease;
 }
+/* Aviso de cotización atípica (al restar cotizaciones) */
+.aviso-fila {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 2px 12px 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fff8e1;
+  color: #7a5a00;
+  border: 1px solid #f1d27a;
+  font-size: 13px;
+  font-weight: 500;
+  animation: entrar var(--normal) var(--curva);
+}
+.aviso-fila svg {
+  width: 16px;
+  height: 16px;
+  stroke: #b8860b;
+}
+.campo.alerta:not(:focus) {
+  border-color: #d4a017;
+  background: #fff8e1;
+}
+
 /* Repartir monto: un solo total por servicio y etiquetas con el reparto */
 #tabla-servicios.repartir {
   --columnas: var(--col-nombre) var(--col-monto) minmax(0, 1.4fr) 40px;
@@ -640,7 +665,7 @@ svg.icono {
   transition: background-color var(--rapido) ease;
   animation: entrar var(--lento) var(--curva);
 }
-.cuerpo-servicios .fila-servicio:nth-child(even) {
+.cuerpo-servicios .fila-servicio:nth-child(even of .fila-servicio) {
   background: var(--superficie-alterna);
 }
 .cuerpo-servicios .fila-servicio.enfocada {
