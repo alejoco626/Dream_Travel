@@ -42,7 +42,7 @@ La vista previa sirve para cambiar el diseño sin compilar: edita los archivos d
 | `calculadora_dream_travel.py` | Punto de entrada |
 | `calculadora/aplicacion.py` | Abre la ventana con pywebview |
 | `calculadora/api.py` | Lo que la página le pide a Python: cálculos, formatos, captura, actualización |
-| `calculadora/config.py` | Versión, porcentajes de costo, tipo de cambio y servicios |
+| `calculadora/config.py` | Versión, porcentajes de costo, tipo de cambio, servicios y pesos de "Repartir monto" |
 | `calculadora/calculo.py` | Fórmulas del presupuesto y redondeo |
 | `calculadora/fechas.py` | Fechas dd/mm/aaaa y cálculo de la fecha de pago |
 | `calculadora/actualizador.py` | Actualización automática desde GitHub Releases |

@@ -42,6 +42,9 @@ PROPORCION_COSTO = {
 MODO_TOTAL = "total"
 MODO_PERSONA = "persona"
 MODO_CAPTURA = {"DISEÑADOR": MODO_PERSONA}
+# "reparto": con el interruptor "Repartir monto" se escribe un solo total por servicio
+# y se reparte según el peso de cada persona (ver PESOS_REPARTO).
+MODO_REPARTO = "reparto"
 
 SERVICIOS_FIJOS = ("BOLETOS NETOS", "DISEÑADOR")
 SERVICIOS_OPCIONALES = (
@@ -93,6 +96,11 @@ EDADES_TIPO = {
     NINOS: "de 2 a 9 años",
     INFANTES: "de 0 a 23 meses",
 }
+
+# Repartir monto: cuánto "pesa" cada persona al dividir el total de un servicio.
+# Ej.: con 2 adultos, 2 niños y 1 infante hay 2 + 1.5 + 0.15 = 3.65 partes.
+PESOS_REPARTO = {ADULTOS: 1.0, NINOS: 0.75, INFANTES: 0.15}
+REPARTIR_POR_DEFECTO = False  # True: la calculadora abre con el interruptor encendido
 
 # Cada servicio se captura en tres montos acumulados:
 # adultos, adultos + niños y adultos + niños + infantes.

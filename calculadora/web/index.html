@@ -51,13 +51,17 @@
 
           <!-- SERVICIOS -->
           <section class="tarjeta" aria-labelledby="t-servicios">
-            <div class="cabeza-seccion">
+            <div class="cabeza-seccion con-interruptor">
               <h2 class="titulo-seccion" id="t-servicios">SERVICIOS</h2>
-              <span class="nota">
-                Escribe el monto total de cada grupo · Diseñador: precio por persona · En
-                Misceláneos marca la casilla para incluir niños o infantes
-              </span>
+              <label class="interruptor grande" data-ayuda="Escribe un solo total por servicio y la calculadora lo reparte entre adultos, niños e infantes">
+                <input type="checkbox" class="oculto-accesible" id="repartir" />
+                <span class="riel"></span>Repartir monto
+              </label>
             </div>
+            <p class="nota nota-servicios" id="nota-servicios">
+              Escribe el monto total de cada grupo · Diseñador: precio por persona · En Misceláneos
+              marca la casilla para incluir niños o infantes
+            </p>
             <div class="esqueleto">
               <div class="barra-esqueleto" style="width: 100%"></div>
               <div class="barra-esqueleto alta" style="width: 100%"></div>
@@ -68,11 +72,13 @@
               <div class="tabla-servicios" id="tabla-servicios">
                 <div class="encabezado-servicios" id="encabezado-servicios">
                   <div>Servicio</div>
-                  <div data-clave="adultos">Adultos</div>
+                  <div data-clave="adultos" class="col-adultos">Adultos</div>
                   <div data-clave="adultos_ninos" class="col-ninos">Adultos + niños</div>
                   <div data-clave="adultos_ninos_infantes" class="col-infantes" id="enc-combinado">
                     Adultos + niños + infantes
                   </div>
+                  <div data-clave="total" class="col-total">Total del grupo</div>
+                  <div class="col-reparto encabezado-reparto">Costo neto por persona</div>
                   <div></div>
                 </div>
                 <div class="cuerpo-servicios" id="cuerpo-servicios"></div>

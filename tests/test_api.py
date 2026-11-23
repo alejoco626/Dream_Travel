@@ -156,6 +156,52 @@ class PruebaCalculo(unittest.TestCase):
         self.assertFalse(api.formatear_monto("1e999")["valido"])
 
 
+class PruebaRepartir(unittest.TestCase):
+    """Interruptor "Repartir monto": un total por servicio repartido por pesos."""
+
+    @staticmethod
+    def total(base, monto, **extra):
+        return {"base": base, "montos": {"total": str(monto)}, **extra}
+
+    def estado(self, servicios, personas=("2", "2", "1")):
+        return {
+            "personas": dict(zip(("ADULTOS", "NIÑOS", "INFANTES"), personas)),
+            "servicios": servicios,
+            "repartir": True,
+            "redondear": True,
+        }
+
+    def test_ejemplo_de_la_familia(self):
+        # Boletos $2,449 en total y Diseñador $220 por persona (x 5 = $1,100)
+        resultado = api.calcular_estado(
+            self.estado([self.total("BOLETOS NETOS", 2449), self.total("DISEÑADOR", 220)])
+        )
+        precios = [resultado["por_persona"][t]["pvp"] for t in ("ADULTOS", "NIÑOS", "INFANTES")]
+        self.assertEqual(precios, ["$ 1,156.00", "$ 867.00", "$ 173.00"])
+        self.assertEqual(resultado["totales"]["pvp"], "$ 4,219.00")
+        self.assertEqual(
+            resultado["reparto"][0], {"ADULTOS": "$ 670.96", "NIÑOS": "$ 503.22", "INFANTES": "$ 100.64"}
+        )
+        self.assertEqual(resultado["monto_reserva"], "$ 3,061.25")  # 2,449 / 0.80
+
+    def test_el_infante_nunca_paga_mas_que_el_nino(self):
+        for personas in (("1", "3", "1"), ("4", "1", "2"), ("2", "0", "1"), ("1", "1", "0")):
+            resultado = api.calcular_estado(self.estado([self.total("BOLETOS NETOS", 1000)], personas))
+            neto = resultado["reparto"][0]
+            valores = [float(neto[t][2:].replace(",", "")) for t in ("ADULTOS", "NIÑOS", "INFANTES") if t in neto]
+            self.assertEqual(valores, sorted(valores, reverse=True), personas)
+
+    def test_miscelaneos_solo_entre_los_marcados(self):
+        resultado = api.calcular_estado(
+            self.estado([self.total("MISCELANEOS", 150, subtipo="Asientos", incluye={"INFANTES": True})])
+        )
+        self.assertEqual(resultado["reparto"][0], {"ADULTOS": "$ 69.77", "INFANTES": "$ 10.47"})
+
+    def test_total_invalido(self):
+        resultado = api.calcular_estado(self.estado([self.total("CRUCEROS", "abc")]))
+        self.assertEqual(resultado["campo"], {"tipo": "monto", "fila": 0, "clave": "total"})
+
+
 class PruebaApi(unittest.TestCase):
     def test_metodos_publicos(self):
         publicos = sorted(n for n in dir(api.Api) if not n.startswith("_"))

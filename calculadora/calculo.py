@@ -12,7 +12,9 @@ from .config import (
     DIVISOR_DESCUENTO_EFECTIVO,
     INFANTES,
     MODO_PERSONA,
+    MODO_REPARTO,
     NINOS,
+    PESOS_REPARTO,
     TIPO_CAMBIO_GTQ,
     TIPOS_PERSONA,
 )
@@ -72,12 +74,36 @@ class Presupuesto:
     totales_columnas: tuple = (0.0, 0.0, 0.0, 0.0)
 
 
+CLAVE_TOTAL = "total"
+
+
+def costos_repartidos(total, tipos_incluidos, cantidades):
+    """Reparte un total según el peso de cada persona (PESOS_REPARTO).
+
+    Solo cuentan los tipos incluidos que tienen personas; la suma siempre da el total.
+    """
+    partes = {
+        tipo: PESOS_REPARTO[tipo] * cantidades[tipo]
+        for tipo in TIPOS_PERSONA
+        if tipo in tipos_incluidos and cantidades.get(tipo, 0) > 0
+    }
+    suma = sum(partes.values())
+    costos = {tipo: 0.0 for tipo in TIPOS_PERSONA}
+    if suma > 0:
+        for tipo, peso in partes.items():
+            costos[tipo] = total * peso / suma
+    return costos
+
+
 def costos_por_tipo(servicio, cantidades):
     """Reparte el costo del servicio entre adultos, niños e infantes.
 
     Los montos son acumulados: el costo de los niños es (adultos + niños) - adultos
     y el de los infantes es (adultos + niños + infantes) - (adultos + niños).
     """
+    if servicio.modo == MODO_REPARTO:
+        return costos_repartidos(servicio.montos[CLAVE_TOTAL], servicio.tipos_incluidos, cantidades)
+
     adultos = cantidades[ADULTOS]
     ninos = cantidades[NINOS] if NINOS in servicio.tipos_incluidos else 0
     infantes = cantidades[INFANTES] if INFANTES in servicio.tipos_incluidos else 0

@@ -549,6 +549,80 @@ svg.icono {
   text-align: right;
   transition: background-color var(--rapido) ease, color var(--rapido) ease;
 }
+/* Repartir monto: un solo total por servicio y etiquetas con el reparto */
+#tabla-servicios.repartir {
+  --columnas: var(--col-nombre) var(--col-monto) minmax(0, 1.4fr) 40px;
+}
+.tabla-servicios:not(.repartir) .col-total,
+.tabla-servicios:not(.repartir) .col-reparto,
+.tabla-servicios.repartir .col-adultos,
+.tabla-servicios.repartir .col-ninos,
+.tabla-servicios.repartir .col-infantes {
+  display: none;
+}
+.encabezado-servicios > div.encabezado-reparto {
+  margin-left: auto;
+  width: fit-content;
+}
+.col-reparto {
+  animation: aparecer var(--normal) ease;
+}
+.reparto {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+.chip {
+  font-size: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto-secundario);
+  white-space: nowrap;
+  animation: aparecer var(--normal) ease;
+}
+.chip b {
+  color: var(--texto);
+  font-weight: 600;
+}
+.marcas-reparto {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+.cabeza-seccion.con-interruptor {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.cabeza-seccion.con-interruptor .interruptor {
+  margin-left: auto;
+}
+.nota-servicios {
+  margin: -4px 0 10px;
+}
+.interruptor.grande {
+  font-size: 13px;
+  color: var(--texto);
+  padding: 6px 12px;
+  background: var(--superficie);
+  border-radius: 10px;
+}
+.interruptor.grande .riel {
+  width: 34px;
+  height: 20px;
+  border-radius: 10px;
+}
+.interruptor.grande .riel::after {
+  width: 16px;
+  height: 16px;
+}
+.interruptor.grande input:checked + .riel::after {
+  transform: translateX(14px);
+}
+
 .encabezado-servicios > div:first-child {
   text-align: left;
   padding-left: 12px;

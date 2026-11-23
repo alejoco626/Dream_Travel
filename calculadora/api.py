@@ -20,6 +20,7 @@ from datetime import datetime
 
 from . import actualizador, fechas, novedades
 from .calculo import (
+    CLAVE_TOTAL,
     ServicioCapturado,
     calcular_presupuesto,
     diferencia_total,
@@ -40,12 +41,15 @@ from .config import (
     INFANTES,
     MODO_CAPTURA,
     MODO_PERSONA,
+    MODO_REPARTO,
     MODO_TOTAL,
     NINOS,
     NOMBRE_APP,
     NOMBRES_SERVICIO,
     NOMBRES_TIPO,
+    PESOS_REPARTO,
     PROPORCION_COSTO,
+    REPARTIR_POR_DEFECTO,
     SERVICIO_MISCELANEOS,
     SERVICIOS_FIJOS,
     SERVICIOS_OPCIONALES,
@@ -139,12 +143,14 @@ def nombre_servicio(servicio):
     return NOMBRES_SERVICIO[base]
 
 
-def capturar_servicio(indice, servicio, activos):
+def capturar_servicio(indice, servicio, activos, cantidades=None, repartir=False):
     """Convierte la fila que manda la página en un ServicioCapturado. Lanza MontoInvalido."""
     base = servicio.get("base")
     if base not in PROPORCION_COSTO:
         raise ValueError(f"servicio desconocido: {base!r}")
     incluidos = frozenset(t for t in TIPOS_PERSONA if incluye_tipo(servicio, t, activos))
+    if repartir:
+        return capturar_total(indice, servicio, incluidos, cantidades or {})
     usados = {
         CLAVE_ADULTOS: True,
         CLAVE_ADULTOS_NINOS: NINOS in incluidos,
@@ -169,6 +175,21 @@ def capturar_servicio(indice, servicio, activos):
     )
 
 
+def capturar_total(indice, servicio, incluidos, cantidades):
+    """Repartir monto: un solo total por servicio. El Diseñador se escribe por persona y
+    se multiplica por todas las personas incluidas (niños e infantes también)."""
+    base = servicio["base"]
+    try:
+        monto = leer_monto(str((servicio.get("montos") or {}).get(CLAVE_TOTAL, "")))
+    except ValueError:
+        raise MontoInvalido(indice, CLAVE_TOTAL, nombre_servicio(servicio)) from None
+    if MODO_CAPTURA.get(base) == MODO_PERSONA:
+        monto *= sum(cantidades.get(tipo, 0) for tipo in incluidos)
+    return ServicioCapturado(
+        nombre_servicio(servicio), PROPORCION_COSTO[base], MODO_REPARTO, {CLAVE_TOTAL: monto}, incluidos
+    )
+
+
 def clave_columna_grupo(activos):
     """Columna de montos que suma a todas las personas del grupo."""
     if INFANTES in activos:
@@ -178,13 +199,14 @@ def clave_columna_grupo(activos):
     return CLAVE_ADULTOS
 
 
-def monto_para_reservar(servicios, activos):
+def monto_para_reservar(servicios, activos, repartir=False):
     """Precio bruto de los boletos para todo el grupo: la columna de boletos que suma a
-    todas las personas, dividida entre su proporción de costo (0.80). None si no es válido."""
+    todas las personas (o el total, al repartir), dividida entre su proporción de costo
+    (0.80). None si no es válido."""
     boletos = next((s for s in servicios if s.get("base") == SERVICIO_BOLETOS), None)
     if boletos is None:
         return 0.0
-    clave = clave_columna_grupo(activos)
+    clave = CLAVE_TOTAL if repartir else clave_columna_grupo(activos)
     try:
         return leer_monto(str((boletos.get("montos") or {}).get(clave, ""))) / PROPORCION_COSTO[
             SERVICIO_BOLETOS
@@ -248,8 +270,9 @@ def calcular_estado(estado):
     activos = tipos_activos(cantidades)
     servicios = [s for s in (estado.get("servicios") or []) if isinstance(s, dict)]
     redondear = bool(estado.get("redondear", True))
+    repartir = bool(estado.get("repartir", False))
 
-    reserva = monto_para_reservar(servicios, activos)
+    reserva = monto_para_reservar(servicios, activos, repartir)
     resultado = {
         "ok": True,
         "activos": activos,
@@ -269,7 +292,7 @@ def calcular_estado(estado):
     capturados = []
     for indice, servicio in enumerate(servicios):
         try:
-            capturados.append(capturar_servicio(indice, servicio, activos))
+            capturados.append(capturar_servicio(indice, servicio, activos, cantidades, repartir))
         except MontoInvalido as error:
             resultado.update(
                 ok=False,
@@ -301,7 +324,16 @@ def calcular_estado(estado):
     }
     resultado["ajuste"] = calcular_ajuste(precios.pvp[ADULTOS], estado.get("ajuste_nuevo"), cantidades, redondear)
     resultado["desglose"] = filas_desglose(presupuesto)
+    resultado["reparto"] = reparto_por_servicio(presupuesto)
     return resultado
+
+
+def reparto_por_servicio(presupuesto):
+    """Costo neto por persona de cada tipo, por servicio (lo que muestran las etiquetas)."""
+    return [
+        {renglon.tipo: dinero(renglon.costo_persona) for renglon in renglones if renglon.cantidad}
+        for _nombre, renglones in presupuesto.servicios
+    ]
 
 
 def calcular_ajuste(precio_actual, texto_nuevo, cantidades, redondear):
@@ -352,6 +384,8 @@ def configuracion_inicial():
         "miscelaneos": SERVICIO_MISCELANEOS,
         "subtipos_miscelaneos": list(SUBTIPOS_MISCELANEOS),
         "claves_monto": list(CLAVES_MONTO),
+        "repartir_por_defecto": REPARTIR_POR_DEFECTO,
+        "pesos_reparto": {tipo: PESOS_REPARTO[tipo] for tipo in TIPOS_PERSONA},
     }
 
 

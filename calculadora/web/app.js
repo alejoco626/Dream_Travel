@@ -6,7 +6,10 @@
 (() => {
   const CLAVES = ["adultos", "adultos_ninos", "adultos_ninos_infantes"];
   const TIPO_DE_CLAVE = { adultos_ninos: "NIÑOS", adultos_ninos_infantes: "INFANTES" };
-  const CLASE_COLUMNA = { adultos: "", adultos_ninos: "col-ninos", adultos_ninos_infantes: "col-infantes" };
+  const CLASE_COLUMNA = { adultos: "col-adultos", adultos_ninos: "col-ninos", adultos_ninos_infantes: "col-infantes" };
+  const NOMBRE_SINGULAR = { ADULTOS: "Adulto", "NIÑOS": "Niño", INFANTES: "Infante" };
+  const NOTA_NORMAL =
+    "Escribe el monto total de cada grupo · Diseñador: precio por persona · En Misceláneos marca la casilla para incluir niños o infantes";
   const RETARDO_CALCULO_MS = 120;
   const RETARDO_AYUDA_MS = 450;
   const RETARDO_NOVEDADES_MS = 500;
@@ -86,6 +89,8 @@
     construirPorPersona();
     config.fijos.forEach((base) => agregarFila(base, { enfocar: false, animar: false, calcular: false }));
     conectarEventos();
+    $("#repartir").checked = Boolean(config.repartir_por_defecto);
+    aplicarReparto(false);
     actualizarColumnas();
     actualizarReloj();
 
@@ -255,6 +260,43 @@
       elemento.append(celda);
     });
 
+    // Repartir monto: un solo total y las etiquetas con lo que le toca a cada tipo
+    const celdaTotal = crear('<div class="celda-monto col-total"></div>');
+    const total = crear('<input class="campo monto" value="$ 0.00" autocomplete="off" />');
+    total.dataset.clave = "total";
+    total.dataset.ayuda = info.por_persona
+      ? "Precio por persona: se multiplica por todas las personas (niños e infantes también)"
+      : "Total del grupo completo";
+    conectarMonto(total, () => resaltar(fila, "total"), () => quitarResalte(fila));
+    fila.entradas.total = total;
+    celdaTotal.append(total);
+    elemento.append(celdaTotal);
+    const celdaReparto = crear('<div class="col-reparto"><div class="reparto"></div></div>');
+    fila.reparto = $(".reparto", celdaReparto);
+    fila.marcasReparto = {};
+    if (esMiscelaneos(fila)) {
+      const marcas = crear('<div class="marcas-reparto"></div>');
+      celdaReparto.insertBefore(marcas, fila.reparto);
+      ["NIÑOS", "INFANTES"].forEach((tipo) => {
+        const marca = crear(`
+          <label class="casilla pequena">
+            <input type="checkbox" class="oculto-accesible" />
+            <span class="caja"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            ${nombreTipo(tipo)}
+          </label>`);
+        marca.dataset.ayuda = `Incluir ${nombreTipo(tipo).toLowerCase()} en este servicio`;
+        const casilla = $("input", marca);
+        casilla.addEventListener("change", () => {
+          fila.marcas[tipo].checked = casilla.checked;
+          actualizarFila(fila);
+          programarCalculo();
+        });
+        fila.marcasReparto[tipo] = casilla;
+        marcas.append(marca);
+      });
+    }
+    elemento.append(celdaReparto);
+
     const celdaQuitar = crear('<div class="celda-quitar"></div>');
     if (!fila.fijo) {
       const quitar = crear(`<button type="button" class="boton-icono quitar" data-ayuda="Quitar servicio" aria-label="Quitar servicio">${icono("i-cerrar")}</button>`);
@@ -267,7 +309,7 @@
     filas.push(fila);
     $("#cuerpo-servicios").append(elemento);
     actualizarFila(fila);
-    if (enfocar) fila.entradas.adultos.focus();
+    if (enfocar) camposEditables(fila)[0].focus();
     if (recalcular) programarCalculo();
     return fila;
   }
@@ -292,6 +334,39 @@
       entrada.dataset.ayuda = descripcionGrupo(clave);
       if (tipo && esMiscelaneos(fila)) entrada.disabled = !(activo(tipo) && fila.marcas[tipo].checked);
     });
+    Object.entries(fila.marcasReparto || {}).forEach(([tipo, casilla]) => {
+      casilla.checked = fila.marcas[tipo].checked;
+      casilla.closest("label").style.display = activo(tipo) ? "" : "none";
+    });
+  }
+
+  function repartiendo() {
+    return $("#repartir").checked;
+  }
+
+  /** Enciende o apaga "Repartir monto". Al encender, si el total está vacío se copia el
+      monto del grupo completo (la última columna activa) para no volver a escribirlo. */
+  function aplicarReparto(recalcular = true) {
+    const encendido = repartiendo();
+    $("#tabla-servicios").classList.toggle("repartir", encendido);
+    const pesos = config.pesos_reparto || {};
+    texto(
+      $("#nota-servicios"),
+      encendido
+        ? `Escribe el total del grupo completo (Diseñador: precio por persona) · Se reparte por persona: adulto ${pesos.ADULTOS} · niño ${pesos["NIÑOS"]} · infante ${pesos.INFANTES}`
+        : NOTA_NORMAL
+    );
+    if (encendido) {
+      const clave = activo("INFANTES") ? "adultos_ninos_infantes" : activo("NIÑOS") ? "adultos_ninos" : "adultos";
+      filas.forEach((fila) => {
+        const total = fila.entradas.total;
+        if (textoEditable(total.value) === "" && textoEditable(fila.entradas[clave].value) !== "") {
+          total.value = fila.entradas[clave].value;
+        }
+      });
+    }
+    ocultarAyuda();
+    if (recalcular) calcular(false);
   }
 
   function actualizarColumnas() {
@@ -370,6 +445,7 @@
   }
 
   function camposEditables(fila) {
+    if (repartiendo()) return [fila.entradas.total];
     return CLAVES.filter((clave) => {
       const tipo = TIPO_DE_CLAVE[clave];
       if (!tipo) return true;
@@ -587,7 +663,7 @@
       personas,
       servicios: filas.map((fila) => {
         const montos = {};
-        CLAVES.forEach((clave) => {
+        CLAVES.concat("total").forEach((clave) => {
           montos[clave] = fila.entradas[clave].value;
         });
         const incluye = {};
@@ -597,6 +673,7 @@
         return { base: fila.base, subtipo: fila.subtipo ? fila.subtipo.value : null, montos, incluye };
       }),
       redondear: $("#redondear").checked,
+      repartir: repartiendo(),
       no_reembolsable: $("#no-reembolsable").checked,
       fecha_viaje: $("#fecha-viaje").value,
       fecha_cancelacion: $("#fecha-cancelacion").value,
@@ -655,8 +732,24 @@
     poner($("#total-descuento-q"), resultado.totales.descuento_q);
     poner($("#ajuste-actual"), resultado.ajuste.actual);
     poner($("#ajuste-diferencia"), resultado.ajuste.diferencia);
+    (resultado.reparto || []).forEach((valores, indice) => dibujarReparto(filas[indice], valores));
     medirDescuento();
     dibujarDesglose(resultado.desglose);
+  }
+
+  function dibujarReparto(fila, valores) {
+    if (!fila) return;
+    const etiquetas = Object.entries(valores).map(([tipo, valor]) => `${NOMBRE_SINGULAR[tipo]}|${valor}`);
+    if (fila.reparto.dataset.valores === etiquetas.join(";")) return;
+    fila.reparto.dataset.valores = etiquetas.join(";");
+    fila.reparto.innerHTML = "";
+    etiquetas.forEach((etiqueta) => {
+      const [nombre, valor] = etiqueta.split("|");
+      const chip = crear('<span class="chip"><span></span> <b></b></span>');
+      texto(chip.firstElementChild, nombre);
+      texto(chip.lastElementChild, valor);
+      fila.reparto.append(chip);
+    });
   }
 
   function dibujarDesglose(desglose) {
@@ -713,6 +806,8 @@
       });
     });
     $("#redondear").checked = true;
+    $("#repartir").checked = Boolean(config.repartir_por_defecto);
+    aplicarReparto(false);
     $("#con-descuento").checked = false;
     aplicarDescuento();
     $("#no-reembolsable").checked = false;
@@ -1023,6 +1118,7 @@
     $("#boton-captura").addEventListener("click", capturar);
     $("#boton-desglose").addEventListener("click", alternarDesglose);
     $("#redondear").addEventListener("change", () => calcular(false));
+    $("#repartir").addEventListener("change", () => aplicarReparto());
     $("#con-descuento").addEventListener("change", aplicarDescuento);
     $("#no-reembolsable").addEventListener("change", () => calcular(false));
 
