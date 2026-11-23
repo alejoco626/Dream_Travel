@@ -304,6 +304,12 @@
       celdaQuitar.append(quitar);
     }
     elemento.append(celdaQuitar);
+    // Al salir de la fila se muestran los avisos que se habían guardado mientras se escribía.
+    elemento.addEventListener("focusout", () =>
+      setTimeout(() => {
+        if (!elemento.contains(document.activeElement)) dibujarAvisos(ultimosAvisos);
+      }, 0)
+    );
 
     fila.elemento = elemento;
     filas.push(fila);
@@ -745,8 +751,15 @@
   }
 
   /** Franja amarilla debajo del servicio con una cotización atípica. */
+  let ultimosAvisos = [];
+
   function dibujarAvisos(avisos) {
-    const nuevos = new Map(avisos.map((aviso) => [filas[aviso.fila], aviso]));
+    ultimosAvisos = avisos;
+    // Mientras se escribe en un servicio no se le avisa nada: se espera a salir de la fila.
+    const enEdicion = filas.find((fila) => fila.elemento.contains(document.activeElement));
+    const nuevos = new Map(
+      avisos.filter((aviso) => filas[aviso.fila] !== enEdicion).map((aviso) => [filas[aviso.fila], aviso])
+    );
     filas.forEach((fila) => {
       const aviso = nuevos.get(fila);
       const actual = fila.elemento.nextElementSibling;

@@ -345,8 +345,11 @@ def avisos_de_cotizacion(capturados, cantidades):
     for indice, servicio in enumerate(capturados):
         if servicio.modo == MODO_REPARTO:
             continue
-        crudos = costos_cotizados(servicio, cantidades)
         tipos = [t for t in TIPOS_PERSONA if t in servicio.tipos_incluidos and cantidades.get(t, 0) > 0]
+        columnas = [CLAVE_ADULTOS] + [COLUMNA_DE_TIPO[t] for t in tipos if t != ADULTOS]
+        if any(servicio.montos.get(columna, 0) <= 0 for columna in columnas):
+            continue  # todavía falta llenar alguna cotización de este servicio
+        crudos = costos_cotizados(servicio, cantidades)
         negativos = [t for t in tipos if crudos[t] < -0.005]
         mensaje = tipo_marcado = None
         if negativos:

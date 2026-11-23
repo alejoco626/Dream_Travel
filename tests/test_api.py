@@ -173,6 +173,14 @@ class PruebaCalculo(unittest.TestCase):
         normal = escenario(servicios=[servicio("BOLETOS NETOS", 1000, 1400, 1450), servicio("DISEÑADOR", 300, 250, 210)])
         self.assertEqual(api.calcular_estado(normal)["avisos"], [])  # el caso normal no avisa
 
+    def test_sin_aviso_mientras_faltan_cotizaciones(self):
+        # Solo la cotización de adultos escrita: "Adultos + niños" vacío no es una baja
+        estado = escenario(
+            personas={"ADULTOS": "3", "NIÑOS": "2", "INFANTES": "0"},
+            servicios=[servicio("BOLETOS NETOS", 1547, 0, 0), servicio("DISEÑADOR", 491, 0, 0)],
+        )
+        self.assertEqual(api.calcular_estado(estado)["avisos"], [])
+
     def test_descuento_sale_del_pvp_redondeado(self):
         for redondear in (True, False):
             resultado = api.calcular_estado(escenario(redondear=redondear))
