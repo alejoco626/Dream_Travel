@@ -344,8 +344,9 @@
     return $("#repartir").checked;
   }
 
-  /** Enciende o apaga "Repartir monto". Al encender, si el total está vacío se copia el
-      monto del grupo completo (la última columna activa) para no volver a escribirlo. */
+  /** Enciende o apaga "Repartir monto". El total y la columna del grupo completo
+      (la última columna activa) son el mismo dato: al cambiar de modo se copia de uno
+      al otro, para que nunca quede un monto viejo. */
   function aplicarReparto(recalcular = true) {
     const encendido = repartiendo();
     $("#tabla-servicios").classList.toggle("repartir", encendido);
@@ -356,15 +357,20 @@
         ? `Escribe el total del grupo completo (Diseñador: precio por persona) · Se reparte por persona: adulto ${pesos.ADULTOS} · niño ${pesos["NIÑOS"]} · infante ${pesos.INFANTES}`
         : NOTA_NORMAL
     );
-    if (encendido) {
-      const clave = activo("INFANTES") ? "adultos_ninos_infantes" : activo("NIÑOS") ? "adultos_ninos" : "adultos";
-      filas.forEach((fila) => {
-        const total = fila.entradas.total;
-        if (textoEditable(total.value) === "" && textoEditable(fila.entradas[clave].value) !== "") {
-          total.value = fila.entradas[clave].value;
-        }
-      });
-    }
+    const clave = activo("INFANTES") ? "adultos_ninos_infantes" : activo("NIÑOS") ? "adultos_ninos" : "adultos";
+    filas.forEach((fila) => {
+      const total = fila.entradas.total;
+      const grupo = fila.entradas[clave];
+      if (grupo.disabled) return; // Misceláneos sin ese tipo marcado
+      const [origen, destino] = encendido ? [grupo, total] : [total, grupo];
+      // Al apagar solo se actualiza una columna que ya se usaba: un servicio agregado con el
+      // interruptor encendido no tiene las otras columnas y quedaría a medias.
+      if (!encendido && textoEditable(grupo.value) === "") return;
+      if (textoEditable(origen.value) !== "") {
+        destino.value = origen.value;
+        destino.classList.remove("invalido");
+      }
+    });
     ocultarAyuda();
     if (recalcular) calcular(false);
   }
