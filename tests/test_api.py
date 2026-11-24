@@ -249,10 +249,11 @@ class PruebaApi(unittest.TestCase):
         self.assertEqual(
             publicos,
             [
-                "buscar_actualizacion", "calcular", "convertir_moneda", "copiar_captura", "copiar_texto",
-                "descargar_actualizacion",
-                "estado_descarga", "formatear_monto", "inicio", "instalar_actualizacion", "listo",
-                "registrar_error_pagina",
+                "abrir_carpeta", "abrir_enlace", "abrir_negociacion", "buscar_actualizacion", "calcular",
+                "convertir_moneda", "copiar_captura", "copiar_texto", "descargar_actualizacion", "estado_descarga",
+                "exportar_historial", "formatear_monto", "guardar_negociacion", "historial_resumen", "inicio",
+                "instalar_actualizacion", "listo", "preparar_guardado", "quitar_negociacion",
+                "registrar_error_pagina", "revisar_enlace",
             ],
         )
 
@@ -320,7 +321,9 @@ class PruebaApi(unittest.TestCase):
         datos = "data:image/png;base64," + base64.b64encode(salida.getvalue()).decode()
         copiadas = []
         with mock.patch.object(api, "copiar_imagen_portapapeles", copiadas.append):
-            self.assertEqual(api.Api().copiar_captura(datos), {"ok": True})
+            respuesta = api.Api().copiar_captura(datos)
+            self.assertTrue(respuesta["ok"] and respuesta["copiada"])
+            self.assertTrue(respuesta["archivo"].endswith(".png"))
         self.assertEqual(copiadas[0].size, (4, 3))
         with mock.patch.object(api, "registrar_error"):
             self.assertFalse(api.Api().copiar_captura("no es una imagen")["ok"])

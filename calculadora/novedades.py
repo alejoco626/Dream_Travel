@@ -19,7 +19,16 @@ SECCIONES = (
 NOVEDADES = {
     "1.0.19": {
         "nuevo": [
-            "La conversión funciona en los dos sentidos: de quetzales a dólares y de dólares a quetzales",
+            "Historial de negociaciones: guarda el enlace de Bitrix24, una referencia y el monto (Ctrl + G)",
+            "Reabre cualquier cotización guardada desde el Historial (Ctrl + H)",
+            "El día 2 de cada mes se guarda un Excel del mes y el historial empieza de nuevo",
+            "Carpeta propia en Documentos › Calculadora D&T con historial, capturas y respaldos",
+            "Ventana de Funciones con la explicación de todo y los atajos de teclado (F1)",
+            "La conversión funciona en los dos sentidos: Q → $ y $ → Q",
+        ],
+        "cambios": [
+            "Las capturas se guardan con fecha, referencia, personas y monto (Ctrl + Shift + S)",
+            "Atajo Ctrl + L para limpiar",
         ],
     },
     "1.0.18": {

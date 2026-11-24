@@ -1,3 +1,4 @@
 pillow
+openpyxl==3.1.5
 pywin32; sys_platform == "win32"
 pywebview==5.4

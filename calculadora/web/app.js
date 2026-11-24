@@ -32,6 +32,8 @@
   let temporizador = null;
   let primeraVez = true;
   let flotante = null;
+  let historialTitulo = "";
+  let negociacionActual = null; // la cotización guardada o reabierta: {id, enlace, negociacion, referencia}
 
   // ------------------------------------------------------------ utilidades
   function icono(id, clase = "icono") {
@@ -92,6 +94,10 @@
     aplicarReparto(false);
     actualizarColumnas();
     actualizarReloj();
+    if (config.historial) {
+      historialTitulo = config.historial.titulo;
+      ponerInsignia(config.historial.cantidad);
+    }
 
     await calcular(false);
     try {
@@ -107,6 +113,7 @@
     api.listo();
 
     if (config.novedades) setTimeout(() => mostrarNovedades(config.novedades), RETARDO_NOVEDADES_MS);
+    if (config.historial && config.historial.aviso) setTimeout(() => avisar(config.historial.aviso, "error", 6000), 900);
     setTimeout(revisarActualizacion, RETARDO_ACTUALIZACION_MS);
   }
 
@@ -352,7 +359,7 @@
   /** Enciende o apaga "Repartir monto". El total y la columna del grupo completo
       (la última columna activa) son el mismo dato: al cambiar de modo se copia de uno
       al otro, para que nunca quede un monto viejo. */
-  function aplicarReparto(recalcular = true) {
+  function pintarModoReparto() {
     const encendido = repartiendo();
     $("#tabla-servicios").classList.toggle("repartir", encendido);
     const pesos = config.pesos_reparto || {};
@@ -362,6 +369,11 @@
         ? `Total del grupo (Diseñador: por persona) · Se reparte: adulto ${pesos.ADULTOS} · niño ${pesos["NIÑOS"]} · infante ${pesos.INFANTES}`
         : NOTA_NORMAL
     );
+  }
+
+  function aplicarReparto(recalcular = true) {
+    const encendido = repartiendo();
+    pintarModoReparto();
     const clave = activo("INFANTES") ? "adultos_ninos_infantes" : activo("NIÑOS") ? "adultos_ninos" : "adultos";
     filas.forEach((fila) => {
       const total = fila.entradas.total;
@@ -866,6 +878,7 @@
 
   function limpiar() {
     cerrarFlotante(true);
+    negociacionActual = null;
     $$("#personas input").forEach((entrada) => {
       entrada.value = entrada.dataset.tipo === "ADULTOS" ? "1" : "0";
     });
@@ -911,9 +924,15 @@
         logging: false,
         onclone: prepararCaptura,
       });
-      const respuesta = await api.copiar_captura(lienzo.toDataURL("image/png"));
+      const respuesta = await api.copiar_captura(lienzo.toDataURL("image/png"), {
+        estado: estadoCompleto(),
+        referencia: negociacionActual ? negociacionActual.referencia : "",
+        negociacion: negociacionActual ? negociacionActual.negociacion : "",
+      });
       if (respuesta && respuesta.ok) {
-        avisar("Captura copiada al portapapeles", "exito", 1800);
+        if (respuesta.copiada && respuesta.archivo) avisar(`Captura copiada y guardada · ${respuesta.archivo}`, "exito", 3200);
+        else if (respuesta.archivo) avisar(`Captura guardada (no se pudo copiar) · ${respuesta.archivo}`, "error", 4000);
+        else avisar("Captura copiada (no se pudo guardar el archivo)", "error", 4000);
         boton.classList.add("hecho");
         boton.innerHTML = icono("i-check");
         setTimeout(() => {
@@ -1060,10 +1079,12 @@
   }
 
   // --------------------------------------------------------------- diálogos
-  function abrirDialogo({ titulo, contenido, botones = [], cerrable = true }) {
-    const capa = crear('<div class="capa-modal"><div class="dialogo" role="dialog" aria-modal="true"><h2></h2><div class="contenido-dialogo"></div><div class="acciones"></div></div></div>');
+  function abrirDialogo({ titulo, contenido, botones = [], cerrable = true, clase = "", icono: simbolo = "", botonCerrar = false, alTeclear = null, enfocar = null }) {
+    const capa = crear('<div class="capa-modal"><div class="dialogo" role="dialog" aria-modal="true"><div class="cab-dialogo"><h2></h2></div><div class="contenido-dialogo"></div><div class="acciones"></div></div></div>');
     const dialogo = $(".dialogo", capa);
+    if (clase) dialogo.classList.add(...clase.split(" "));
     texto($("h2", capa), titulo);
+    if (simbolo) $(".cab-dialogo", capa).prepend(crear(icono(simbolo)));
     const zona = $(".contenido-dialogo", capa);
     if (typeof contenido === "string") zona.append(texto(document.createElement("p"), contenido));
     else if (contenido) zona.append(contenido);
@@ -1073,6 +1094,7 @@
     function cerrar() {
       if (cerrado) return;
       cerrado = true;
+      dialogosAbiertos.splice(dialogosAbiertos.indexOf(cerrar), 1);
       capa.classList.add("cerrando");
       const retirar = () => capa.remove();
       capa.addEventListener("animationend", retirar, { once: true });
@@ -1082,11 +1104,16 @@
     }
 
     function teclas(evento) {
-      if (evento.key === "Escape" && cerrable) {
+      // Con dos ventanas abiertas, solo responde la de arriba.
+      const abiertas = $$(".capa-modal:not(.cerrando)");
+      if (abiertas[abiertas.length - 1] !== capa) return;
+      if (alTeclear && alTeclear(evento, cerrar)) {
+        evento.preventDefault();
+      } else if (evento.key === "Escape" && cerrable) {
         evento.preventDefault();
         cerrar();
       } else if (evento.key === "Tab") {
-        const enfocables = $$("button, input", dialogo);
+        const enfocables = $$("button:not([disabled]), input", dialogo).filter((e) => e.offsetParent !== null);
         if (!enfocables.length) return;
         const primero = enfocables[0];
         const ultimo = enfocables[enfocables.length - 1];
@@ -1097,21 +1124,63 @@
           evento.preventDefault();
           primero.focus();
         }
+      } else if (evento.ctrlKey && !["c", "v", "x", "a", "z", "y"].includes(evento.key.toLowerCase())) {
+        evento.preventDefault(); // los atajos de la calculadora no actúan detrás de la ventana
       }
-      evento.stopPropagation();
     }
 
-    botones.forEach((definicion) => {
+    if (botonCerrar && cerrable) {
+      const x = crear(`<button type="button" class="boton-icono cerrar-dialogo" aria-label="Cerrar" data-ayuda="Cerrar · Esc">${icono("i-cerrar")}</button>`);
+      x.addEventListener("click", cerrar);
+      $(".cab-dialogo", capa).append(x);
+    }
+    const botonesCreados = botones.map((definicion) => {
       const boton = texto(crear(`<button type="button" class="boton ${definicion.clase || "suave"}"></button>`), definicion.texto);
-      boton.addEventListener("click", () => (definicion.accion ? definicion.accion(cerrar) : cerrar()));
+      if (definicion.atajo) boton.append(texto(crear('<span class="atajo-boton"></span>'), definicion.atajo));
+      boton.addEventListener("click", () => (definicion.accion ? definicion.accion(cerrar, boton) : cerrar()));
       $(".acciones", capa).append(boton);
+      return boton;
     });
     if (!botones.length) $(".acciones", capa).remove();
     document.addEventListener("keydown", teclas, true);
+    dialogosAbiertos.push(cerrar);
+    ocultarAyuda();
     document.body.append(capa);
-    const principal = $(".boton.primario", capa) || $("button", capa);
+    const principal = enfocar || $(".boton.primario", capa) || $("button", capa);
     if (principal) principal.focus();
-    return { capa, dialogo, cerrar };
+    return { capa, dialogo, cerrar, botones: botonesCreados };
+  }
+
+  const dialogosAbiertos = [];
+
+  function cerrarDialogos() {
+    dialogosAbiertos.slice().reverse().forEach((cerrar) => cerrar());
+  }
+
+  function hayDialogo() {
+    return Boolean($(".capa-modal:not(.cerrando)"));
+  }
+
+  /** Pregunta antes de algo que no se puede deshacer. Devuelve una promesa con true/false. */
+  function confirmar({ titulo, mensaje, aceptar = "Aceptar", peligro = false }) {
+    return new Promise((resolver) => {
+      let respondido = false;
+      const { capa } = abrirDialogo({
+        titulo,
+        contenido: mensaje,
+        clase: "medio",
+        botones: [
+          { texto: "Cancelar", clase: "suave", accion: (cerrar) => { respondido = true; resolver(false); cerrar(); } },
+          { texto: aceptar, clase: peligro ? "peligro" : "primario", accion: (cerrar) => { respondido = true; resolver(true); cerrar(); } },
+        ],
+      });
+      new MutationObserver((_, observador) => {
+        if (!document.body.contains(capa) || capa.classList.contains("cerrando")) {
+          observador.disconnect();
+          if (!respondido) resolver(false);
+        }
+      }).observe(capa, { attributes: true, attributeFilter: ["class"] });
+    });
   }
 
   function mostrarNovedades(notas) {
@@ -1189,12 +1258,476 @@
     api.descargar_actualizacion().then(seguir);
   }
 
+
+  // ------------------------------------------------------------- historial
+  function estadoCompleto() {
+    return { ...leerEstado(), con_descuento: $("#con-descuento").checked };
+  }
+
+  function ponerInsignia(cantidad) {
+    const insignia = $("#insignia-historial");
+    const antes = insignia.textContent;
+    insignia.hidden = !cantidad;
+    texto(insignia, String(cantidad || 0));
+    if (antes !== insignia.textContent && !primeraVez) {
+      insignia.classList.remove("salto");
+      void insignia.offsetWidth;
+      insignia.classList.add("salto");
+    }
+  }
+
+  function hayDatos() {
+    const personas = $$("#personas input").some((e) => (e.dataset.tipo === "ADULTOS" ? e.value !== "1" : e.value !== "0"));
+    const montos = filas.some((fila) => Object.values(fila.entradas).some((e) => textoEditable(e.value) !== ""));
+    return personas || montos || filas.some((fila) => !fila.fijo);
+  }
+
+  /** Vuelve a cargar en la calculadora una cotización guardada. */
+  function restaurarEstado(estado) {
+    cerrarFlotante(true);
+    ocultarAyuda();
+    const personas = estado.personas || {};
+    $$("#personas input").forEach((entrada) => {
+      const valor = parseInt(personas[entrada.dataset.tipo], 10);
+      entrada.value = String(Number.isFinite(valor) ? Math.min(99, Math.max(0, valor)) : entrada.dataset.tipo === "ADULTOS" ? 1 : 0);
+    });
+    filas.filter((fila) => !fila.fijo).forEach((fila) => fila.elemento.remove());
+    filas = filas.filter((fila) => fila.fijo);
+    $$("#cuerpo-servicios .aviso-fila").forEach((franja) => franja.remove());
+    filas.forEach((fila) => {
+      Object.values(fila.entradas).forEach((entrada) => {
+        entrada.value = "$ 0.00";
+        entrada.classList.remove("invalido", "alerta");
+      });
+      Object.values(fila.marcas).forEach((casilla) => (casilla.checked = false));
+    });
+    $("#repartir").checked = Boolean(estado.repartir);
+    pintarModoReparto();
+
+    const usados = new Set();
+    (estado.servicios || []).forEach((servicio) => {
+      if (!servicio || !config.servicios[servicio.base]) return;
+      let fila = filas.find((f) => f.fijo && f.base === servicio.base && !usados.has(f));
+      if (!fila) fila = agregarFila(servicio.base, { enfocar: false, animar: false, calcular: false });
+      usados.add(fila);
+      if (fila.subtipo && servicio.subtipo) fila.subtipo.value = servicio.subtipo;
+      Object.entries(servicio.incluye || {}).forEach(([tipo, valor]) => {
+        if (fila.marcas[tipo]) fila.marcas[tipo].checked = Boolean(valor);
+      });
+      Object.entries(servicio.montos || {}).forEach(([clave, valor]) => {
+        if (fila.entradas[clave]) fila.entradas[clave].value = String(valor || "$ 0.00");
+      });
+    });
+
+    $("#redondear").checked = estado.redondear !== false;
+    $("#con-descuento").checked = Boolean(estado.con_descuento);
+    aplicarDescuento();
+    $("#no-reembolsable").checked = Boolean(estado.no_reembolsable);
+    $("#fecha-viaje").value = estado.fecha_viaje || "";
+    $("#fecha-cancelacion").value = estado.fecha_cancelacion || "";
+    $("#ajuste-nuevo").value = estado.ajuste_nuevo || "";
+    actualizarColumnas();
+    calcular(false);
+  }
+
+  let abriendoGuardar = false;
+
+  async function abrirGuardar() {
+    if (abriendoGuardar || hayDialogo()) return;
+    abriendoGuardar = true;
+    try {
+      if (temporizador) await calcular(false);
+      const estado = estadoCompleto();
+      const previo = await api.preparar_guardado(estado);
+      if (!previo || !previo.ok) {
+        avisar((previo && previo.mensaje) || "Revisa la cotización antes de guardarla.", "error", 3500);
+        return;
+      }
+      if (previo.monto_pvp <= 0) {
+        avisar("La cotización está en $ 0.00: escribe los montos antes de guardarla.", "error", 3500);
+        return;
+      }
+      mostrarGuardar(estado, previo);
+    } finally {
+      abriendoGuardar = false;
+    }
+  }
+
+  function mostrarGuardar(estado, previo) {
+    const servicios = previo.servicios.length ? ` · ${previo.servicios.join(", ")}` : "";
+    const contenido = crear(`
+      <div>
+        <p class="sub"></p>
+        <div class="form-campo">
+          <label for="guardar-enlace">Enlace de negociación</label>
+          <input class="campo" id="guardar-enlace" autocomplete="off" spellcheck="false" placeholder="Pega aquí el enlace de Bitrix24" />
+          <span class="ayuda-campo" id="guardar-ayuda">Pega el enlace de la negociación.</span>
+        </div>
+        <div class="form-campo">
+          <label for="guardar-referencia">Nombre de referencia <span>(opcional)</span></label>
+          <input class="campo" id="guardar-referencia" autocomplete="off" maxlength="80" placeholder="Ej.: Familia López · Cancún" />
+        </div>
+        <div class="resumen-guardar">
+          <div><div class="et"></div><div class="det"></div></div>
+          <div><div class="grande"></div><div class="q"></div></div>
+        </div>
+      </div>`);
+    const titulo = historialTitulo || "este mes";
+    texto($(".sub", contenido), `Se guarda en el historial de ${titulo.toLowerCase()} con la configuración completa de la calculadora.`);
+    texto($(".resumen-guardar .et", contenido), "Monto que se guarda · Total PVP");
+    if (estado.con_descuento) $(".resumen-guardar .q", contenido).after(texto(crear('<div class="q"></div>'), `Con descuento ${previo.descuento}`));
+    texto($(".resumen-guardar .det", contenido), `${previo.personas_texto}${servicios}`);
+    texto($(".resumen-guardar .grande", contenido), previo.pvp);
+    texto($(".resumen-guardar .q", contenido), previo.pvp_q);
+    const enlace = $("#guardar-enlace", contenido);
+    const referencia = $("#guardar-referencia", contenido);
+    const ayuda = $("#guardar-ayuda", contenido);
+    if (negociacionActual) {
+      enlace.value = negociacionActual.enlace;
+      referencia.value = negociacionActual.referencia;
+    }
+
+    let revision = 0;
+    async function revisar() {
+      const mia = ++revision;
+      const r = await api.revisar_enlace(enlace.value);
+      if (mia !== revision || !r) return;
+      ayuda.className = `ayuda-campo ${r.tono}`;
+      texto(ayuda, r.tono === "exito" ? `✓ ${r.mensaje}` : r.mensaje);
+      enlace.classList.toggle("invalido", r.tono === "error");
+      return r;
+    }
+    enlace.addEventListener("input", revisar);
+    enlace.addEventListener("focus", () => enlace.select());
+    if (enlace.value) revisar();
+
+    let ocupado = false;
+    async function guardar(cerrar, accion = "comprobar", id = null) {
+      if (ocupado) return;
+      const revisado = await revisar();
+      if (!revisado || !revisado.valido) {
+        enlace.classList.add("invalido");
+        enlace.focus();
+        return;
+      }
+      ocupado = true;
+      try {
+        const r = await api.guardar_negociacion({ enlace: enlace.value, referencia: referencia.value, estado, accion, id });
+        if (r && r.ok) {
+          cerrar();
+          const reg = r.registro;
+          negociacionActual = { id: reg.id, enlace: reg.enlace, negociacion: reg.negociacion, referencia: reg.referencia };
+          avisar(r.actualizado ? "Negociación actualizada en el historial" : "Negociación guardada en el historial", "exito", 2200);
+          refrescarInsignia();
+        } else if (r && r.duplicado) {
+          preguntarDuplicado(r, (nuevaAccion, idRepetido) => guardar(cerrar, nuevaAccion, idRepetido));
+        } else {
+          avisar((r && r.mensaje) || "No se pudo guardar.", "error", 3500);
+          if (r && r.campo === "enlace") enlace.focus();
+        }
+      } finally {
+        ocupado = false;
+      }
+    }
+
+    abrirDialogo({
+      titulo: "Guardar negociación",
+      icono: "i-guardar",
+      clase: "medio",
+      contenido,
+      enfocar: enlace.value ? referencia : enlace,
+      botones: [
+        { texto: "Cancelar", clase: "suave" },
+        { texto: "Guardar", clase: "primario", atajo: "Ctrl+G", accion: (cerrar) => guardar(cerrar) },
+      ],
+      alTeclear: (evento, cerrar) => {
+        const tecla = evento.key.toLowerCase();
+        if ((evento.key === "Enter" && evento.target.tagName === "INPUT") || (evento.ctrlKey && tecla === "g")) {
+          guardar(cerrar);
+          return true;
+        }
+        return false;
+      },
+    });
+  }
+
+  function preguntarDuplicado(respuesta, elegir) {
+    const repetido = respuesta.duplicado;
+    const cuando = repetido.hoy ? `hoy a las ${repetido.hora}` : `el ${repetido.fecha} a las ${repetido.hora}`;
+    const contenido = crear("<div><p></p><p class=\"sub\">Actualizar reemplaza el monto y la configuración guardada; no crea otra fila.</p></div>");
+    const nombre = repetido.referencia || (repetido.negociacion ? `la negociación ${repetido.negociacion}` : "este enlace");
+    texto($("p", contenido), `${nombre[0].toUpperCase()}${nombre.slice(1)} se guardó ${cuando} con ${repetido.monto}.\nAhora la calculadora tiene ${respuesta.nuevo_monto}.`);
+    abrirDialogo({
+      titulo: "Esta negociación ya está guardada",
+      clase: "medio",
+      contenido,
+      botones: [
+        { texto: "Cancelar", clase: "suave" },
+        { texto: "Guardar como otra", clase: "suave", accion: (cerrar) => { cerrar(); elegir("nuevo"); } },
+        { texto: "Actualizar", clase: "primario", accion: (cerrar) => { cerrar(); elegir("actualizar", repetido.id); } },
+      ],
+    });
+  }
+
+  async function refrescarInsignia() {
+    const r = await api.historial_resumen();
+    if (r && r.ok) {
+      historialTitulo = r.titulo;
+      ponerInsignia(r.cantidad);
+    }
+    return r;
+  }
+
+  function filaHistorial(registro, alCambiar) {
+    const fila = crear(`
+      <div class="fila-hist">
+        <span class="hora"></span>
+        <span class="ref"></span>
+        <button type="button" class="enlace"><span></span>${icono("i-enlace")}</button>
+        <span class="pers"></span>
+        <div class="monto"><span class="copiable"></span><span class="linea-q"><span class="copiable"></span></span></div>
+        <div class="acc">
+          <button type="button" class="boton-icono reabrir" data-ayuda="Reabrir en la calculadora" aria-label="Reabrir en la calculadora">${icono("i-reabrir")}</button>
+          <button type="button" class="boton-icono quitar" data-ayuda="Quitar del historial" aria-label="Quitar del historial">${icono("i-basura")}</button>
+        </div>
+      </div>`);
+    texto($(".hora", fila), registro.hora);
+    const ref = $(".ref", fila);
+    texto(ref, registro.referencia || "Sin referencia");
+    ref.classList.toggle("vacia", !registro.referencia);
+    if (registro.referencia) ref.title = registro.referencia;
+    const enlace = $(".enlace", fila);
+    texto($("span", enlace), registro.negociacion ? `Negociación ${registro.negociacion}` : "Abrir enlace");
+    enlace.dataset.ayuda = registro.enlace;
+    enlace.addEventListener("click", async () => {
+      const r = await api.abrir_enlace(registro.enlace);
+      if (!r || !r.ok) avisar((r && r.mensaje) || "No se pudo abrir el enlace.", "error", 3000);
+    });
+    texto($(".pers", fila), registro.personas);
+    const [usd, q] = $$(".copiable", fila);
+    texto(usd, registro.monto);
+    texto(q, registro.monto_q);
+    if (registro.con_descuento) {
+      const etiqueta = texto(crear('<span class="etq-desc"></span>'), "con descuento");
+      etiqueta.dataset.ayuda = `Con descuento por pago en efectivo: ${registro.descuento}`;
+      $(".linea-q", fila).prepend(etiqueta);
+    }
+    $(".reabrir", fila).addEventListener("click", () => reabrir(registro));
+    $(".quitar", fila).addEventListener("click", async () => {
+      const nombre = registro.referencia || (registro.negociacion ? `la negociación ${registro.negociacion}` : "esta negociación");
+      const si = await confirmar({
+        titulo: "¿Quitar del historial?",
+        mensaje: `Se quitará ${nombre} (${registro.monto}) del historial de este mes.`,
+        aceptar: "Quitar",
+        peligro: true,
+      });
+      if (!si) return;
+      const r = await api.quitar_negociacion(registro.id);
+      if (!r || !r.ok) {
+        avisar((r && r.mensaje) || "No se pudo quitar.", "error", 3000);
+        return;
+      }
+      if (negociacionActual && negociacionActual.id === registro.id) negociacionActual = null;
+      fila.classList.add("saliendo");
+      setTimeout(alCambiar, 180);
+    });
+    fila.dataset.busqueda = [registro.referencia, registro.negociacion, registro.enlace, registro.personas, registro.monto, registro.hora]
+      .join(" ")
+      .toLowerCase();
+    return fila;
+  }
+
+  async function reabrir(registro) {
+    const r = await api.abrir_negociacion(registro.id);
+    if (!r || !r.ok) {
+      avisar((r && r.mensaje) || "No se pudo abrir.", "error", 3000);
+      return;
+    }
+    const mismo = negociacionActual && negociacionActual.id === r.id;
+    if (hayDatos() && !mismo) {
+      const si = await confirmar({
+        titulo: "¿Reabrir esta cotización?",
+        mensaje: "Lo que tienes ahora en la calculadora se reemplazará. Si lo necesitas, guárdalo antes.",
+        aceptar: "Reabrir",
+      });
+      if (!si) return;
+    }
+    cerrarDialogos();
+    restaurarEstado(r.estado || {});
+    negociacionActual = { id: r.id, enlace: r.enlace, negociacion: r.negociacion, referencia: r.referencia };
+    const nombre = r.referencia || (r.negociacion ? `Negociación ${r.negociacion}` : "Cotización");
+    avisar(`${nombre} cargada en la calculadora`, "exito", 2200);
+  }
+
+  function esqueletoHistorial() {
+    const lista = crear('<div class="lista-hist"></div>');
+    [70, 100, 100, 100, 60, 100, 100].forEach((ancho, i) =>
+      lista.append(crear(`<div class="barra-esqueleto ${i % 3 ? "alta" : ""}" style="width:${ancho}%"></div>`))
+    );
+    return lista;
+  }
+
+  async function abrirHistorial() {
+    if (hayDialogo()) return;
+    const contenido = crear(`
+      <div class="contenido-historial" style="display:contents">
+        <div class="chips">
+          <div class="chip-dato"><div class="et">Negociaciones</div><div class="v" id="hist-cantidad">—</div></div>
+          <div class="chip-dato"><div class="et">Total del mes</div><div class="v"><span class="copiable" id="hist-total">—</span><small class="copiable" id="hist-total-q"></small></div></div>
+          <div class="chip-dato"><div class="et">Hoy</div><div class="v"><span id="hist-hoy">—</span><small class="copiable" id="hist-hoy-total"></small></div></div>
+        </div>
+        <div class="barra-hist">
+          <label class="buscar">${icono("i-buscar")}<input class="campo" id="hist-buscar" autocomplete="off" placeholder="Buscar por referencia, número o monto" /></label>
+          <span class="espacio"></span>
+          <button type="button" class="boton suave" id="hist-carpeta">${icono("i-carpeta")}Abrir carpeta</button>
+          <button type="button" class="boton suave" id="hist-excel">${icono("i-excel")}Exportar a Excel</button>
+        </div>
+        <div class="aviso-reinicio" id="hist-reinicio">${icono("i-alerta")}<span></span></div>
+      </div>`);
+    let lista = esqueletoHistorial();
+    contenido.append(lista);
+    const { dialogo } = abrirDialogo({
+      titulo: "Historial",
+      icono: "i-reloj",
+      clase: "ancho",
+      contenido,
+      botonCerrar: true,
+      enfocar: $("#hist-buscar", contenido),
+      alTeclear: (evento) => {
+        if (evento.ctrlKey && evento.key.toLowerCase() === "h") return true;
+        return false;
+      },
+    });
+    const buscar = $("#hist-buscar", contenido);
+    $("#hist-carpeta", contenido).addEventListener("click", () => api.abrir_carpeta("raiz"));
+    $("#hist-excel", contenido).addEventListener("click", async (evento) => {
+      const boton = evento.currentTarget;
+      boton.disabled = true;
+      const r = await api.exportar_historial();
+      boton.disabled = false;
+      if (r && r.ok) avisar(`Excel creado · ${r.archivo}`, "exito", 3200);
+      else avisar((r && r.mensaje) || "No se pudo crear el Excel.", "error", 4000);
+    });
+
+    async function cargar() {
+      const r = await refrescarInsignia();
+      if (!document.body.contains(dialogo)) return;
+      if (!r || !r.ok) {
+        avisar((r && r.mensaje) || "No se pudo leer el historial.", "error", 4000);
+        return;
+      }
+      texto($("h2", dialogo), `Historial · ${r.titulo}`);
+      texto($("#hist-cantidad", contenido), String(r.cantidad));
+      texto($("#hist-total", contenido), r.total);
+      texto($("#hist-total-q", contenido), r.total_q);
+      texto($("#hist-hoy", contenido), String(r.hoy_cantidad));
+      texto($("#hist-hoy-total", contenido), r.hoy_total);
+      const reinicio = $("#hist-reinicio", contenido);
+      reinicio.classList.toggle("problema", Boolean(r.aviso));
+      $("span", reinicio).innerHTML = "";
+      if (r.aviso) texto($("span", reinicio), r.aviso);
+      else {
+        $("span", reinicio).append("El ", texto(document.createElement("b"), r.reinicio), " se guarda una copia en Excel de este mes y el historial empieza de nuevo.");
+      }
+
+      const nueva = crear('<div class="lista-hist"></div>');
+      if (!r.cantidad) {
+        nueva.append(crear(`<div class="vacio-hist">${icono("i-reloj")}<div>Todavía no hay negociaciones este mes.</div><div>Usa <b>Guardar</b> o <kbd>Ctrl</kbd>+<kbd>G</kbd> para agregar la primera.</div></div>`));
+      } else {
+        nueva.append(crear('<div class="fila-hist encab-hist"><span>Hora</span><span>Referencia</span><span>Enlace de negociación</span><span>Personas</span><span style="text-align:right">Monto</span><span></span></div>'));
+        r.dias.forEach((dia) => {
+          const grupo = crear('<div class="grupo-dia"><div class="dia-hist"><b></b><span class="cuenta"></span><span class="tot copiable"></span></div></div>');
+          texto($("b", grupo), dia.titulo);
+          texto($(".cuenta", grupo), `${dia.cantidad} ${dia.cantidad === 1 ? "negociación" : "negociaciones"}`);
+          texto($(".tot", grupo), dia.total);
+          dia.registros.forEach((registro) => grupo.append(filaHistorial(registro, cargar)));
+          nueva.append(grupo);
+        });
+        nueva.append(crear('<div class="vacio-hist sin-resultados" hidden>No hay negociaciones que coincidan con la búsqueda.</div>'));
+      }
+      lista.replaceWith(nueva);
+      lista = nueva;
+      filtrar();
+    }
+
+    function filtrar() {
+      const termino = buscar.value.trim().toLowerCase();
+      let visibles = 0;
+      $$(".grupo-dia", lista).forEach((grupo) => {
+        let enGrupo = 0;
+        $$(".fila-hist", grupo).forEach((fila) => {
+          const ver = !termino || fila.dataset.busqueda.includes(termino);
+          fila.hidden = !ver;
+          if (ver) enGrupo += 1;
+        });
+        grupo.hidden = !enGrupo;
+        visibles += enGrupo;
+      });
+      const sinResultados = $(".sin-resultados", lista);
+      if (sinResultados) sinResultados.hidden = visibles > 0;
+    }
+    buscar.addEventListener("input", filtrar);
+    cargar();
+  }
+
+  function abrirFunciones() {
+    if (hayDialogo()) return;
+    const atajo = (...teclas) => teclas.map((t) => `<kbd>${t}</kbd>`).join("+");
+    const funciones = [
+      ["i-camara", "Tomar captura", `Copia la calculadora completa como imagen y la guarda en la carpeta Capturas con fecha, referencia, personas y monto. ${atajo("Ctrl", "Shift", "S")}`],
+      ["i-guardar", "Guardar negociación", `Guarda el enlace de Bitrix24, una referencia opcional, el Total PVP y toda la configuración. ${atajo("Ctrl", "G")}`],
+      ["i-reloj", "Historial", `Negociaciones del mes por día. Abre el enlace o copia montos con un clic, y reabre cualquier cotización. El día 2 de cada mes se guarda un Excel y empieza de nuevo. ${atajo("Ctrl", "H")}`],
+      ["i-reparto", "Repartir monto", `Para cotizaciones atípicas: escribes un solo total por servicio y se reparte adulto ${config.pesos_reparto.ADULTOS} · niño ${config.pesos_reparto["NIÑOS"]} · infante ${config.pesos_reparto.INFANTES}.`],
+      ["i-redondear", "Redondear", "Redondea cada precio por persona al entero más cercano (50.49 → 50, 50.50 → 51)."],
+      ["i-etiqueta", "PVP con descuento", "Muestra también el precio por pago único en efectivo (PVP ÷ 1.05)."],
+      ["i-intercambiar", "Conversión", `Convierte quetzales a dólares o al revés con el botón ⇄, a ${config.tipo_cambio}. No cambia el presupuesto.`],
+      ["i-copiar", "Copiar con un clic", "Toca cualquier cifra en dólares o quetzales para copiarla tal como se ve."],
+      ["i-lista", "Desglose", "Costo y PVP de cada servicio. Siempre sale en la captura, aunque esté plegado."],
+      ["i-calendario", "Fecha de pago", "Con la fecha de viaje y la de cancelación del hotel calcula cuándo pagar, y avisa de fechas que no existen o ya pasaron."],
+      ["i-moneda", "Monto para reservar", "Total de boletos del grupo completo ÷ 0.80, listo para copiar."],
+      ["i-ajuste", "Ajuste de diseñador", "Escribe el precio por adulto que quieres ofrecer y ve la diferencia contra el actual."],
+    ];
+    const contenido = crear(`
+      <div class="contenido-funciones">
+        <div class="funciones-grid"></div>
+        <h3 class="seccion-f">Atajos de teclado</h3>
+        <div class="tabla-atajos">
+          <span>${atajo("Ctrl", "Enter")}</span><span>Calcular</span><span>${atajo("Ctrl", "G")}</span><span>Guardar negociación</span>
+          <span>${atajo("Ctrl", "Shift", "S")}</span><span>Tomar captura</span><span>${atajo("Ctrl", "H")}</span><span>Abrir historial</span>
+          <span>${atajo("Ctrl", "L")}</span><span>Limpiar todo</span><span>${atajo("Enter")}</span><span>Pasar al siguiente campo</span>
+          <span>${atajo("F1")}</span><span>Abrir esta ventana</span><span>${atajo("Esc")}</span><span>Cerrar ventanas</span>
+        </div>
+        <h3 class="seccion-f">Carpeta de la calculadora</h3>
+        <div class="carpeta-f">${icono("i-carpeta")}<b>Documentos › Calculadora D&amp;T</b><span>Historial, Capturas (por mes) y Respaldos Excel</span>
+          <button type="button" class="boton suave" id="funciones-carpeta">Abrir carpeta</button></div>
+      </div>`);
+    const rejilla = $(".funciones-grid", contenido);
+    funciones.forEach(([simbolo, titulo, descripcion]) => {
+      const tarjeta = crear(`<div class="funcion"><span class="ic">${icono(simbolo)}</span><b></b><p>${descripcion}</p></div>`);
+      texto($("b", tarjeta), titulo);
+      rejilla.append(tarjeta);
+    });
+    $("#funciones-carpeta", contenido).addEventListener("click", () => api.abrir_carpeta("raiz"));
+    abrirDialogo({
+      titulo: "Funciones de la calculadora",
+      icono: "i-funciones",
+      clase: "ancho",
+      contenido,
+      botonCerrar: true,
+      alTeclear: (evento) => evento.key === "F1",
+    });
+  }
+
   // ---------------------------------------------------------------- eventos
   function conectarEventos() {
     $("#agregar-servicio").addEventListener("click", abrirMenuServicios);
     $("#boton-calcular").addEventListener("click", () => calcular(true));
     $("#boton-limpiar").addEventListener("click", limpiar);
     $("#boton-captura").addEventListener("click", capturar);
+    $("#boton-guardar").addEventListener("click", abrirGuardar);
+    $("#boton-historial").addEventListener("click", abrirHistorial);
+    $("#boton-funciones").addEventListener("click", abrirFunciones);
+    $("#enlace-carpeta").addEventListener("click", () => api.abrir_carpeta("raiz"));
     document.addEventListener("click", (evento) => {
       const cifra = evento.target.closest(".copiable");
       if (cifra && !window.getSelection().toString()) copiarCifra(cifra);
@@ -1267,6 +1800,21 @@
     conectarMonto(ajuste, null, () => programarCalculo(), true);
 
     document.addEventListener("keydown", (evento) => {
+      if (hayDialogo()) return;
+      const tecla = evento.key.toLowerCase();
+      const atajo =
+        evento.key === "F1" ? abrirFunciones
+        : evento.ctrlKey && evento.shiftKey && tecla === "s" ? capturar
+        : evento.ctrlKey && !evento.shiftKey && tecla === "g" ? abrirGuardar
+        : evento.ctrlKey && !evento.shiftKey && tecla === "h" ? abrirHistorial
+        : evento.ctrlKey && !evento.shiftKey && tecla === "l" ? limpiar
+        : null;
+      if (atajo) {
+        evento.preventDefault();
+        cerrarFlotante(true);
+        atajo();
+        return;
+      }
       if (evento.key === "Enter" && evento.ctrlKey) {
         evento.preventDefault();
         if (document.activeElement && document.activeElement.classList.contains("monto")) {

@@ -40,6 +40,7 @@ def guardar_captura(imagen):
 
 modulo_api.copiar_imagen_portapapeles = guardar_captura
 modulo_api.copiar_texto_portapapeles = lambda texto: print(f"Copiado: {texto}", flush=True)
+modulo_api.abrir_en_windows = lambda destino: print(f"Abrir: {destino}", flush=True)
 API = modulo_api.Api()
 
 if os.environ.get("VISTA_PREVIA_DEMO"):

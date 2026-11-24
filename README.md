@@ -17,7 +17,26 @@ niños e infantes. Calcula el PVP por persona, el precio con descuento por pago
    de toda la calculadora al portapapeles. *PVP con descuento* muestra también el precio
    con descuento por pago en efectivo.
 
-Atajos: `Enter` pasa al siguiente campo · `Ctrl + Enter` calcula.
+6. **Guardar** (`Ctrl + G`) pide el enlace de la negociación de Bitrix24 y un nombre de
+   referencia opcional, y guarda el Total PVP con toda la configuración. **Historial**
+   (`Ctrl + H`) muestra las negociaciones del mes por día: el enlace se abre con un clic,
+   los montos se copian con un clic y ↺ vuelve a cargar la cotización.
+7. **Funciones** (`F1`) explica cada función y los atajos.
+
+Atajos: `Enter` siguiente campo · `Ctrl + Enter` calcular · `Ctrl + G` guardar ·
+`Ctrl + H` historial · `Ctrl + Shift + S` captura · `Ctrl + L` limpiar · `F1` funciones · `Esc` cerrar.
+
+### Carpeta de la calculadora
+
+Todo queda en `Documentos\Calculadora D&T`:
+
+- `Historial\historial.json` — negociaciones del periodo (del día 2 al día 1 del mes siguiente),
+  con `historial.respaldo.json` como copia de la versión anterior. Se escribe a un temporal y
+  se reemplaza de golpe, así un corte de luz no deja el archivo a medias.
+- `Capturas\AAAA-MM Mes\` — capturas con fecha, referencia, personas y monto en el nombre.
+- `Respaldos Excel\` — el día 2 se crea el Excel del mes anterior, se comprueba que esté
+  completo y solo entonces se vacía el historial (también queda el JSON en
+  `Historial\Meses anteriores`). Si el Excel falla, no se borra nada y se reintenta al abrir.
 
 Si la calculadora no abre, el detalle del error queda en
 `%LOCALAPPDATA%\DreamTravel\calculadora_error.log`.
@@ -44,6 +63,7 @@ La vista previa sirve para cambiar el diseño sin compilar: edita los archivos d
 | `calculadora/api.py` | Lo que la página le pide a Python: cálculos, formatos, captura, actualización |
 | `calculadora/config.py` | Versión, porcentajes de costo, tipo de cambio, servicios y pesos de "Repartir monto" |
 | `calculadora/calculo.py` | Fórmulas del presupuesto y redondeo |
+| `calculadora/historial.py` | Historial de negociaciones, cambio de mes, Excel y carpeta en Documentos |
 | `calculadora/fechas.py` | Fechas dd/mm/aaaa y cálculo de la fecha de pago |
 | `calculadora/actualizador.py` | Actualización automática desde GitHub Releases |
 | `calculadora/novedades.py` | Notas que se muestran después de cada actualización |

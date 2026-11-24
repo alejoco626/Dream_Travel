@@ -9,17 +9,19 @@ con guion bajo para que no queden a la vista de la página.
 """
 
 import base64
+import json
 import binascii
 import io
 import os
 import re
 import queue
+import subprocess
 import sys
 import threading
 import traceback
 from datetime import date, datetime
 
-from . import actualizador, fechas, novedades
+from . import actualizador, fechas, historial, novedades
 from .calculo import (
     CLAVE_TOTAL,
     costos_cotizados,
@@ -435,6 +437,115 @@ def convertir_quetzales(texto):
     return {"valido": respuesta["valido"], "dolares": respuesta["resultado"]}
 
 
+# ---------------------------------------------------------------- historial
+CLAVES_ESTADO = (
+    "personas", "servicios", "redondear", "repartir", "no_reembolsable",
+    "fecha_viaje", "fecha_cancelacion", "ajuste_nuevo", "con_descuento",
+)
+
+
+def limpiar_estado(estado):
+    """Solo lo necesario para volver a cargar la cotización, con un tamaño razonable."""
+    if not isinstance(estado, dict):
+        raise ValueError("La configuración llegó vacía.")
+    limpio = {clave: estado[clave] for clave in CLAVES_ESTADO if clave in estado}
+    if len(json.dumps(limpio, ensure_ascii=False)) > historial.MAXIMO_ESTADO:
+        raise ValueError("La configuración es demasiado grande para guardarla.")
+    return limpio
+
+
+def _numero(texto):
+    try:
+        return leer_monto(re.sub(r"[Qq]", "", str(texto or "")))
+    except ValueError:
+        return 0.0
+
+
+def servicios_con_monto(estado):
+    nombres = []
+    for servicio in estado.get("servicios") or []:
+        if not isinstance(servicio, dict) or servicio.get("base") not in PROPORCION_COSTO:
+            continue
+        if any(_numero(valor) > 0 for valor in (servicio.get("montos") or {}).values()):
+            nombre = nombre_servicio(servicio)
+            if nombre not in nombres:
+                nombres.append(nombre)
+    return nombres
+
+
+def resumen_cotizacion(estado):
+    """Montos y textos de la cotización actual, para guardarla o nombrar su captura."""
+    resultado = calcular_estado(estado)
+    if not resultado.get("ok"):
+        return {"ok": False, "mensaje": resultado.get("mensaje") or "Revisa la cotización antes de guardarla."}
+    totales = resultado["totales"]
+    cantidades = resultado["cantidades"]
+    return {
+        "ok": True,
+        "personas": cantidades,
+        "personas_texto": historial.personas_largo(cantidades),
+        "servicios": servicios_con_monto(estado),
+        "monto_pvp": _numero(totales["pvp"]),
+        "monto_pvp_q": _numero(totales["pvp_q"]),
+        "monto_descuento": _numero(totales["descuento"]),
+        "monto_descuento_q": _numero(totales["descuento_q"]),
+        "pvp": totales["pvp"],
+        "pvp_q": totales["pvp_q"],
+        "descuento": totales["descuento"],
+        "descuento_q": totales["descuento_q"],
+    }
+
+
+def registro_para_pantalla(registro):
+    creado = datetime.fromisoformat(registro["creado"])
+    return {
+        "id": registro["id"],
+        "hora": creado.strftime("%H:%M"),
+        "fecha": creado.strftime("%d/%m/%Y"),
+        "referencia": registro.get("referencia") or "",
+        "negociacion": registro.get("negociacion") or "",
+        "enlace": registro.get("enlace") or "",
+        "personas": historial.personas_largo(registro.get("personas") or {}),
+        "monto": dinero(registro.get("monto_pvp", 0.0)),
+        "monto_q": formato_quetzales(registro.get("monto_pvp_q", 0.0)),
+        "con_descuento": bool(registro.get("con_descuento")),
+        "descuento": dinero(registro.get("monto_descuento", 0.0)),
+        "descuento_q": formato_quetzales(registro.get("monto_descuento_q", 0.0)),
+    }
+
+
+def resumen_historial(datos):
+    return {
+        "ok": True,
+        "titulo": datos["titulo"],
+        "reinicio": f"{datos['reinicio'].day} de {historial.MESES[datos['reinicio'].month - 1].lower()}",
+        "cantidad": datos["cantidad"],
+        "total": dinero(datos["total"]),
+        "total_q": formato_quetzales(datos["total_q"]),
+        "hoy_cantidad": datos["hoy_cantidad"],
+        "hoy_total": dinero(datos["hoy_total"]),
+        "dias": [
+            {
+                "titulo": dia["titulo"],
+                "cantidad": len(dia["registros"]),
+                "total": dinero(dia["total"]),
+                "registros": [registro_para_pantalla(r) for r in dia["registros"]],
+            }
+            for dia in datos["dias"]
+        ],
+        "aviso": datos["aviso"],
+    }
+
+
+def abrir_en_windows(destino):
+    if hasattr(os, "startfile"):
+        os.startfile(destino)  # noqa: S606 - ruta o enlace ya validados
+    else:
+        import webbrowser
+
+        webbrowser.open(destino)
+
+
 def configuracion_inicial():
     """Lo que la página necesita para dibujarse: textos, servicios y novedades."""
     return {
@@ -579,6 +690,8 @@ class Api:
         self._info_actualizacion = None
         self._descarga = None
         self._candado = threading.Lock()
+        self._historial = historial.Historial()
+        self._ultima_captura = None
 
     def _asignar_ventana(self, ventana):
         self._ventana = ventana
@@ -588,6 +701,12 @@ class Api:
     def inicio(self):
         configuracion = configuracion_inicial()
         configuracion["novedades"] = notas_de_novedades()
+        try:  # la carpeta y el cambio de mes nunca deben impedir que abra la calculadora
+            self._historial.preparar_carpetas()
+            configuracion["historial"] = resumen_historial(self._historial.resumen())
+        except Exception:
+            registrar_error(traceback.format_exc())
+            configuracion["historial"] = None
         return configuracion
 
     @con_registro
@@ -607,14 +726,36 @@ class Api:
 
     # -- captura ------------------------------------------------------------
     @con_registro
-    def copiar_captura(self, datos_png):
+    def copiar_captura(self, datos_png, info=None):
+        """Copia la captura al portapapeles y la guarda en Capturas con un nombre claro."""
         try:
             imagen = imagen_desde_base64(datos_png)
-            copiar_imagen_portapapeles(imagen)
-        except Exception as error:  # portapapeles de Windows ocupado, imagen dañada...
+        except Exception as error:  # imagen dañada
             registrar_error(traceback.format_exc())
-            return {"ok": False, "mensaje": f"No se pudo copiar la captura.\n{error}"}
-        return {"ok": True}
+            return {"ok": False, "mensaje": f"No se pudo tomar la captura.\n{error}"}
+        copiada = guardada = None
+        try:
+            copiar_imagen_portapapeles(imagen)
+            copiada = True
+        except Exception:  # portapapeles de Windows ocupado
+            registrar_error(traceback.format_exc())
+        try:
+            info = info if isinstance(info, dict) else {}
+            resumen = resumen_cotizacion(info.get("estado") or {})
+            ruta = self._historial.ruta_captura(
+                resumen.get("personas") or {},
+                resumen.get("monto_pvp", 0.0) if resumen.get("ok") else 0.0,
+                historial.limpiar_referencia(info.get("referencia")),
+                re.sub(r"\D", "", str(info.get("negociacion") or "")),
+            )
+            imagen.convert("RGB").save(ruta, "PNG")
+            guardada = os.path.basename(ruta)
+            self._ultima_captura = ruta
+        except Exception:  # carpeta sin permiso, disco lleno...
+            registrar_error(traceback.format_exc())
+        if not copiada and not guardada:
+            return {"ok": False, "mensaje": "No se pudo copiar ni guardar la captura."}
+        return {"ok": True, "copiada": bool(copiada), "archivo": guardada}
 
     @con_registro
     def convertir_moneda(self, texto, origen="GTQ"):
@@ -633,6 +774,119 @@ class Api:
             registrar_error(traceback.format_exc())
             return {"ok": False, "mensaje": f"No se pudo copiar.\n{error}"}
         return {"ok": True}
+
+    # -- historial ----------------------------------------------------------
+    @con_registro
+    def historial_resumen(self):
+        return resumen_historial(self._historial.resumen())
+
+    @con_registro
+    def revisar_enlace(self, texto):
+        return historial.revisar_enlace(texto)
+
+    @con_registro
+    def preparar_guardado(self, estado):
+        return resumen_cotizacion(estado)
+
+    @con_registro
+    def guardar_negociacion(self, datos):
+        """datos: enlace, referencia, estado, accion ("comprobar" | "nuevo" | "actualizar"), id."""
+        datos = datos if isinstance(datos, dict) else {}
+        enlace = historial.revisar_enlace(datos.get("enlace"))
+        if not enlace["valido"]:
+            return {"ok": False, "campo": "enlace", "mensaje": enlace["mensaje"]}
+        try:
+            estado = limpiar_estado(datos.get("estado"))
+        except ValueError as error:
+            return {"ok": False, "mensaje": str(error)}
+        resumen = resumen_cotizacion(estado)
+        if not resumen["ok"]:
+            return resumen
+        if resumen["monto_pvp"] <= 0:
+            return {"ok": False, "mensaje": "La cotización está en $ 0.00: escribe los montos antes de guardarla."}
+        accion = datos.get("accion") or "comprobar"
+        if accion == "comprobar":
+            repetido = self._historial.duplicado(enlace["enlace"], enlace["negociacion"])
+            if repetido:
+                return {
+                    "ok": False,
+                    "duplicado": {
+                        **registro_para_pantalla(repetido),
+                        "hoy": repetido["creado"][:10] == datetime.now().date().isoformat(),
+                    },
+                    "nuevo_monto": resumen["pvp"],
+                }
+        con_descuento = bool(estado.get("con_descuento"))
+        registro = {
+            "enlace": enlace["enlace"],
+            "negociacion": enlace["negociacion"],
+            "referencia": historial.limpiar_referencia(datos.get("referencia")),
+            "personas": resumen["personas"],
+            "servicios": resumen["servicios"],
+            "monto_pvp": resumen["monto_pvp"],
+            "monto_pvp_q": resumen["monto_pvp_q"],
+            "con_descuento": con_descuento,
+            "monto_descuento": resumen["monto_descuento"],
+            "monto_descuento_q": resumen["monto_descuento_q"],
+            "estado": estado,
+        }
+        try:
+            guardado = self._historial.guardar(registro, datos.get("id") if accion == "actualizar" else None)
+        except (KeyError, OverflowError) as error:
+            return {"ok": False, "mensaje": str(error).strip("'\"")}
+        return {"ok": True, "registro": registro_para_pantalla(guardado), "actualizado": accion == "actualizar"}
+
+    @con_registro
+    def abrir_negociacion(self, identificador):
+        registro = self._historial.buscar(str(identificador or ""))
+        if registro is None:
+            return {"ok": False, "mensaje": "Esa negociación ya no está en el historial."}
+        return {
+            "ok": True,
+            "id": registro["id"],
+            "enlace": registro.get("enlace") or "",
+            "negociacion": registro.get("negociacion") or "",
+            "referencia": registro.get("referencia") or "",
+            "estado": registro.get("estado") or {},
+        }
+
+    @con_registro
+    def quitar_negociacion(self, identificador):
+        if not self._historial.quitar(str(identificador or "")):
+            return {"ok": False, "mensaje": "Esa negociación ya no está en el historial."}
+        return {"ok": True}
+
+    @con_registro
+    def exportar_historial(self):
+        try:
+            ruta = self._historial.exportar()
+        except Exception as error:  # Excel abierto, sin permiso...
+            registrar_error(traceback.format_exc())
+            return {"ok": False, "mensaje": f"No se pudo crear el Excel.\n{error}"}
+        self._mostrar_en_carpeta(ruta)
+        return {"ok": True, "archivo": os.path.basename(ruta)}
+
+    @con_registro
+    def abrir_enlace(self, enlace):
+        revisado = historial.revisar_enlace(enlace)
+        if not revisado["valido"]:
+            return {"ok": False, "mensaje": "El enlace no es válido."}
+        abrir_en_windows(revisado["enlace"])
+        return {"ok": True}
+
+    @con_registro
+    def abrir_carpeta(self, cual="raiz"):
+        if cual == "ultima_captura" and self._ultima_captura and os.path.exists(self._ultima_captura):
+            self._mostrar_en_carpeta(self._ultima_captura)
+            return {"ok": True}
+        abrir_en_windows(self._historial.carpeta(cual if cual != "ultima_captura" else "capturas"))
+        return {"ok": True}
+
+    def _mostrar_en_carpeta(self, ruta):
+        if os.name == "nt":
+            subprocess.Popen(["explorer", "/select,", os.path.normpath(ruta)])  # noqa: S603,S607
+        else:
+            abrir_en_windows(os.path.dirname(ruta))
 
     # -- errores de la página ------------------------------------------------
     def registrar_error_pagina(self, texto):
