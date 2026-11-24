@@ -17,6 +17,23 @@ SECCIONES = (
 )
 
 NOVEDADES = {
+    "1.0.18": {
+        "nuevo": [
+            "Interruptor Repartir monto para cotizaciones atípicas",
+            "Las cifras se copian con un clic",
+            "Conversión de quetzales a dólares",
+            "Aviso cuando una cotización da precios ilógicos",
+        ],
+        "cambios": [
+            "Panel de resultados más ordenado",
+            "La captura incluye el desglose",
+        ],
+        "correcciones": [
+            "Ningún costo puede salir negativo",
+            "El descuento cuadra con el PVP redondeado",
+            "Se revisan las fechas que no existen",
+        ],
+    },
     "1.0.17": {
         "nuevo": [
             "Nuevo diseño de la calculadora, más claro y con animaciones",
