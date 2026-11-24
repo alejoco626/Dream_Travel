@@ -32,7 +32,7 @@ jobs:
 
       - name: Compilar el programa
         run: >
-          pyinstaller --onefile --windowed --clean
+          pyinstaller --onedir --windowed --clean --noconfirm
           --name Calculadora_Dream_Travel
           --icon icono_calculadora.ico
           --add-data "icono_calculadora.ico;."
@@ -46,7 +46,7 @@ jobs:
           $env:CALCULADORA_PRUEBA_ARRANQUE = "1"
           $registro = Join-Path $env:LOCALAPPDATA "DreamTravel\calculadora_error.log"
           Remove-Item $registro -ErrorAction SilentlyContinue
-          $proceso = Start-Process dist\Calculadora_Dream_Travel.exe -PassThru
+          $proceso = Start-Process dist\Calculadora_Dream_Travel\Calculadora_Dream_Travel.exe -PassThru
           if (-not $proceso.WaitForExit(60000)) { $proceso.Kill(); throw "El programa no cerro a tiempo" }
           if (Test-Path $registro) { Get-Content $registro; throw "El programa fallo al abrir" }
           if ($proceso.ExitCode -ne 0) { throw "Codigo de salida $($proceso.ExitCode)" }

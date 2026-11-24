@@ -19,7 +19,8 @@ UninstallDisplayIcon={app}\icono_calculadora.ico
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-CloseApplications=yes
+; "force": si la calculadora sigue abierta (o quedó un proceso sin ventana), se cierra a la fuerza.
+CloseApplications=force
 RestartApplications=no
 ; Avisa a Windows que refresque los iconos al terminar (evita que muestre el icono anterior).
 ChangesAssociations=yes
@@ -33,7 +34,8 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "desktopicon"; Description: "Crear un acceso directo en el escritorio"; Flags: unchecked
 
 [Files]
-Source: "dist\Calculadora_Dream_Travel.exe"; DestDir: "{app}"; Flags: ignoreversion
+; El programa es una carpeta (PyInstaller --onedir): el .exe y _internal\ con lo que necesita.
+Source: "dist\Calculadora_Dream_Travel\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "icono_calculadora.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
@@ -66,4 +68,16 @@ begin
   { El programa reabierto no debe heredar la carpeta temporal del anterior (error "Failed to load Python DLL"). }
   SetEnvironmentVariable('PYINSTALLER_RESET_ENVIRONMENT', '1');
   Result := True;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Codigo: Integer;
+begin
+  { Las versiones de un solo .exe dejaban un proceso sin ventana que bloqueaba el archivo
+    y la actualizacion se quedaba esperando. Antes de copiar, se cierra cualquier copia
+    de la calculadora que siga corriendo. }
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM Calculadora_Dream_Travel.exe', '', SW_HIDE, ewWaitUntilTerminated, Codigo);
+  Sleep(800);
+  Result := '';
 end;
