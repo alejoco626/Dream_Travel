@@ -12,6 +12,7 @@ import base64
 import binascii
 import io
 import os
+import re
 import queue
 import sys
 import threading
@@ -410,15 +411,28 @@ def formatear_monto(texto):
         return {"valido": False, "texto": str(texto or "")}
 
 
-def convertir_quetzales(texto):
-    """'Q 1,000' -> {'valido': True, 'dolares': '$ 126.90'} con el tipo de cambio de config."""
-    limpio = str(texto or "").replace("Q", "").replace("q", "")
+def convertir_moneda(texto, origen="GTQ"):
+    """Conversión rápida con el tipo de cambio de config, en los dos sentidos.
+
+    origen="GTQ": 'Q 7,880' -> {'valido': True, 'resultado': '$ 1,000.00'}
+    origen="USD": '$ 100'   -> {'valido': True, 'resultado': 'Q 788.00'}
+    """
+    a_quetzales = str(origen).upper() == "USD"
+    formato = formato_quetzales if a_quetzales else dinero
+    limpio = re.sub(r"[QqGgTt]", "", str(texto or ""))
     if not limpio.strip():
-        return {"valido": True, "dolares": dinero(0)}
+        return {"valido": True, "resultado": formato(0)}
     try:
-        return {"valido": True, "dolares": dinero(leer_monto(limpio) / TIPO_CAMBIO_GTQ)}
+        monto = leer_monto(limpio)
     except ValueError:
-        return {"valido": False, "dolares": "—"}
+        return {"valido": False, "resultado": "—"}
+    return {"valido": True, "resultado": formato(monto * TIPO_CAMBIO_GTQ if a_quetzales else monto / TIPO_CAMBIO_GTQ)}
+
+
+def convertir_quetzales(texto):
+    """'Q 1,000' -> {'valido': True, 'dolares': '$ 126.90'} (atajo de Q -> $)."""
+    respuesta = convertir_moneda(texto, "GTQ")
+    return {"valido": respuesta["valido"], "dolares": respuesta["resultado"]}
 
 
 def configuracion_inicial():
@@ -603,9 +617,9 @@ class Api:
         return {"ok": True}
 
     @con_registro
-    def convertir_quetzales(self, texto):
-        """Conversión rápida Q -> $ (no afecta el presupuesto)."""
-        return convertir_quetzales(texto)
+    def convertir_moneda(self, texto, origen="GTQ"):
+        """Conversión rápida Q <-> $ (no afecta el presupuesto)."""
+        return convertir_moneda(texto, origen)
 
     @con_registro
     def copiar_texto(self, texto):

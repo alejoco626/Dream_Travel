@@ -249,7 +249,7 @@ class PruebaApi(unittest.TestCase):
         self.assertEqual(
             publicos,
             [
-                "buscar_actualizacion", "calcular", "convertir_quetzales", "copiar_captura", "copiar_texto",
+                "buscar_actualizacion", "calcular", "convertir_moneda", "copiar_captura", "copiar_texto",
                 "descargar_actualizacion",
                 "estado_descarga", "formatear_monto", "inicio", "instalar_actualizacion", "listo",
                 "registrar_error_pagina",
@@ -286,8 +286,19 @@ class PruebaApi(unittest.TestCase):
         self.assertFalse(respuesta["ok"])
         registrar.assert_called_once()
 
+    def test_convertir_moneda(self):
+        convertir = api.Api().convertir_moneda
+        self.assertEqual(convertir("7880", "GTQ"), {"valido": True, "resultado": "$ 1,000.00"})
+        self.assertEqual(convertir("Q 1,000"), {"valido": True, "resultado": "$ 126.90"})
+        self.assertEqual(convertir("100", "USD"), {"valido": True, "resultado": "Q 788.00"})
+        self.assertEqual(convertir("$ 1,250.50", "USD"), {"valido": True, "resultado": "Q 9,853.94"})
+        self.assertEqual(convertir("", "USD"), {"valido": True, "resultado": "Q 0.00"})
+        self.assertEqual(convertir("", "GTQ"), {"valido": True, "resultado": "$ 0.00"})
+        self.assertFalse(convertir("abc", "USD")["valido"])
+        self.assertEqual(convertir("abc", "USD")["resultado"], "—")
+
     def test_convertir_quetzales(self):
-        convertir = api.Api().convertir_quetzales
+        convertir = api.convertir_quetzales
         self.assertEqual(convertir("1000"), {"valido": True, "dolares": "$ 126.90"})
         self.assertEqual(convertir("Q 7,880"), {"valido": True, "dolares": "$ 1,000.00"})
         self.assertEqual(convertir(""), {"valido": True, "dolares": "$ 0.00"})

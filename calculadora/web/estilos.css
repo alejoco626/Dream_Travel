@@ -1595,6 +1595,29 @@ div.copiable {
 .campo-quetzales .campo.monto {
   padding-left: 22px;
 }
-.herramienta .igual {
-  color: var(--texto-secundario);
+/* Botón ⇄ del convertidor: gira y el prefijo / resultado aparecen con un fundido corto */
+.boton-icono.intercambiar {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+.boton-icono.intercambiar .icono {
+  transition: transform var(--normal) var(--curva);
+}
+#herramienta-conversion[data-origen="USD"] .intercambiar .icono {
+  transform: rotate(180deg);
+}
+#herramienta-conversion.girando .prefijo,
+#herramienta-conversion.girando #convertir-usd {
+  animation: cambiar-moneda var(--normal) var(--curva);
+}
+@keyframes cambiar-moneda {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

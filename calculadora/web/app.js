@@ -887,6 +887,7 @@
     $("#ajuste-nuevo").value = "";
     $("#convertir-q").value = "";
     $("#convertir-q").classList.remove("invalido");
+    window.__ponerOrigenConversion?.("GTQ");
     texto($("#convertir-usd"), "$ 0.00");
     actualizarColumnas();
     calcular(false);
@@ -1223,21 +1224,44 @@
       boton.addEventListener("click", () => abrirCalendario($(`#${boton.dataset.calendario}`), boton))
     );
 
-    // Convertidor Q -> $: aparte del presupuesto
-    const quetzales = $("#convertir-q");
+    // Convertidor Q <-> $: aparte del presupuesto
+    const conversion = $("#herramienta-conversion");
+    const montoConvertir = $("#convertir-q");
+    const intercambiar = $("#convertir-intercambiar");
     let convirtiendo = 0;
-    quetzales.addEventListener("input", async () => {
+    async function convertir() {
       const mia = ++convirtiendo;
-      const respuesta = await api.convertir_quetzales(quetzales.value);
+      const respuesta = await api.convertir_moneda(montoConvertir.value, conversion.dataset.origen);
       if (mia !== convirtiendo || !respuesta) return;
-      quetzales.classList.toggle("invalido", !respuesta.valido);
-      poner($("#convertir-usd"), respuesta.dolares);
+      montoConvertir.classList.toggle("invalido", !respuesta.valido);
+      poner($("#convertir-usd"), respuesta.resultado);
+    }
+    function describirConversion() {
+      const deDolares = conversion.dataset.origen === "USD";
+      texto($("#convertir-prefijo"), deDolares ? "$" : "Q");
+      intercambiar.setAttribute("aria-label", deDolares ? "Cambiar a quetzales → dólares" : "Cambiar a dólares → quetzales");
+      intercambiar.dataset.ayuda = deDolares ? "Ahora: dólares → quetzales. Clic para invertir" : "Ahora: quetzales → dólares. Clic para invertir";
+      conversion.dataset.ayuda = `${deDolares ? "Dólares a quetzales" : "Quetzales a dólares"} (tipo de cambio ${config.tipo_cambio}) · solo para consultar, no cambia el presupuesto`;
+    }
+    window.__ponerOrigenConversion = (origen) => {
+      conversion.dataset.origen = origen;
+      describirConversion();
+    };
+    montoConvertir.addEventListener("input", convertir);
+    montoConvertir.addEventListener("focus", () => montoConvertir.select());
+    montoConvertir.addEventListener("keydown", (evento) => {
+      if (evento.key === "Enter") montoConvertir.blur();
     });
-    quetzales.addEventListener("focus", () => quetzales.select());
-    quetzales.addEventListener("keydown", (evento) => {
-      if (evento.key === "Enter") quetzales.blur();
+    intercambiar.addEventListener("click", () => {
+      conversion.dataset.origen = conversion.dataset.origen === "USD" ? "GTQ" : "USD";
+      conversion.classList.remove("girando");
+      void conversion.offsetWidth;
+      conversion.classList.add("girando");
+      describirConversion();
+      convertir();
     });
-    $("#herramienta-conversion").dataset.ayuda = `Quetzales a dólares (tipo de cambio ${config.tipo_cambio}) · solo para consultar, no cambia el presupuesto`;
+    conversion.addEventListener("animationend", () => conversion.classList.remove("girando"));
+    describirConversion();
 
     const ajuste = $("#ajuste-nuevo");
     conectarMonto(ajuste, null, () => programarCalculo(), true);

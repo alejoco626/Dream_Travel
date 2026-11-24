@@ -17,6 +17,11 @@ SECCIONES = (
 )
 
 NOVEDADES = {
+    "1.0.19": {
+        "nuevo": [
+            "La conversión funciona en los dos sentidos: de quetzales a dólares y de dólares a quetzales",
+        ],
+    },
     "1.0.18": {
         "nuevo": [
             "Interruptor Repartir monto para cotizaciones atípicas",
