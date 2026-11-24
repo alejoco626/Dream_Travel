@@ -16,7 +16,7 @@ import queue
 import sys
 import threading
 import traceback
-from datetime import datetime
+from datetime import date, datetime
 
 from . import actualizador, fechas, novedades
 from .calculo import (
@@ -55,6 +55,7 @@ from .config import (
     SERVICIOS_FIJOS,
     SERVICIOS_OPCIONALES,
     SUBTIPOS_MISCELANEOS,
+    TIPO_CAMBIO_GTQ,
     TIPOS_PERSONA,
     VERSION_APP,
 )
@@ -216,23 +217,18 @@ def monto_para_reservar(servicios, activos, repartir=False):
         return None
 
 
+def hoy():
+    return date.today()
+
+
 def resultado_pago(estado):
     if estado.get("no_reembolsable"):
-        return {"visible": False, "texto": "", "tono": "neutro"}
-    viaje = fechas.leer_fecha(str(estado.get("fecha_viaje") or ""))
-    cancelacion = fechas.leer_fecha(str(estado.get("fecha_cancelacion") or ""))
-    if viaje is None or cancelacion is None:
-        return {
-            "visible": True,
-            "texto": "Escribe las dos fechas para ver la fecha de pago.",
-            "tono": "neutro",
-        }
-    pago, holgada = fechas.fecha_de_pago(viaje, cancelacion)
-    return {
-        "visible": True,
-        "texto": f"Fecha de pago: {fechas.formato_fecha(pago)}",
-        "tono": "exito" if holgada else "peligro",
-    }
+        return {"visible": False, "texto": "", "tono": "neutro", "campo": None}
+    resultado = fechas.revisar_fechas(
+        str(estado.get("fecha_viaje") or ""), str(estado.get("fecha_cancelacion") or ""), hoy()
+    )
+    resultado["visible"] = True
+    return resultado
 
 
 def filas_desglose(presupuesto):
@@ -414,6 +410,17 @@ def formatear_monto(texto):
         return {"valido": False, "texto": str(texto or "")}
 
 
+def convertir_quetzales(texto):
+    """'Q 1,000' -> {'valido': True, 'dolares': '$ 126.90'} con el tipo de cambio de config."""
+    limpio = str(texto or "").replace("Q", "").replace("q", "")
+    if not limpio.strip():
+        return {"valido": True, "dolares": dinero(0)}
+    try:
+        return {"valido": True, "dolares": dinero(leer_monto(limpio) / TIPO_CAMBIO_GTQ)}
+    except ValueError:
+        return {"valido": False, "dolares": "—"}
+
+
 def configuracion_inicial():
     """Lo que la página necesita para dibujarse: textos, servicios y novedades."""
     return {
@@ -439,6 +446,7 @@ def configuracion_inicial():
         "claves_monto": list(CLAVES_MONTO),
         "repartir_por_defecto": REPARTIR_POR_DEFECTO,
         "pesos_reparto": {tipo: PESOS_REPARTO[tipo] for tipo in TIPOS_PERSONA},
+        "tipo_cambio": TIPO_CAMBIO_GTQ,
     }
 
 
@@ -480,6 +488,20 @@ def imagen_desde_base64(datos):
     imagen = Image.open(io.BytesIO(crudo))
     imagen.load()
     return imagen
+
+
+MAXIMO_TEXTO_COPIADO = 60
+
+
+def copiar_texto_portapapeles(texto):
+    import win32clipboard
+
+    win32clipboard.OpenClipboard()
+    try:
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardText(texto, win32clipboard.CF_UNICODETEXT)
+    finally:
+        win32clipboard.CloseClipboard()
 
 
 def copiar_imagen_portapapeles(imagen):
@@ -569,6 +591,24 @@ class Api:
         except Exception as error:  # portapapeles de Windows ocupado, imagen dañada...
             registrar_error(traceback.format_exc())
             return {"ok": False, "mensaje": f"No se pudo copiar la captura.\n{error}"}
+        return {"ok": True}
+
+    @con_registro
+    def convertir_quetzales(self, texto):
+        """Conversión rápida Q -> $ (no afecta el presupuesto)."""
+        return convertir_quetzales(texto)
+
+    @con_registro
+    def copiar_texto(self, texto):
+        """Copia una cifra de la pantalla ("$ 1,161.00", "Q 9,149.00")."""
+        texto = str(texto or "").strip()
+        if not texto or len(texto) > MAXIMO_TEXTO_COPIADO:
+            return {"ok": False, "mensaje": "No hay nada que copiar."}
+        try:
+            copiar_texto_portapapeles(texto)
+        except Exception as error:  # portapapeles de Windows ocupado
+            registrar_error(traceback.format_exc())
+            return {"ok": False, "mensaje": f"No se pudo copiar.\n{error}"}
         return {"ok": True}
 
     # -- errores de la página ------------------------------------------------

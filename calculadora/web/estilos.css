@@ -889,21 +889,75 @@ svg.icono {
 .aviso-pago.peligro {
   color: var(--peligro);
 }
+/* Fechas a la izquierda; el monto para reservar como cifra destacada a la derecha */
+.pago {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: start;
+}
+.pago-fechas {
+  min-width: 0;
+}
 .reserva {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--divisor);
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: var(--superficie);
+  min-width: 200px;
 }
 .reserva .etiqueta {
+  font-size: 12px;
   font-weight: 600;
+  color: var(--texto-secundario);
 }
 .reserva .valor {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--marca);
+}
+.aviso-pago.error {
+  color: var(--peligro);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Cifras que se copian con un clic */
+.copiable {
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color var(--rapido) ease, box-shadow var(--rapido) ease;
+}
+div.copiable {
+  width: fit-content;
+}
+.copiable:hover {
+  background: var(--suave);
+  box-shadow: 0 0 0 3px var(--suave);
+}
+.copiable.copiado {
+  animation: copiado 700ms ease;
+}
+@keyframes copiado {
+  0%,
+  40% {
+    background: #d9f2e4;
+    box-shadow: 0 0 0 3px #d9f2e4;
+  }
+}
+
+/* Desglose: el botón va en el encabezado */
+.cabeza-desglose {
+  margin-bottom: 0;
+}
+.cabeza-desglose .boton-desglose {
+  margin-left: auto;
+}
+#bloque-desglose:not(.cerrado) {
+  margin-top: 8px;
 }
 
 /* ---------------------------------------------------------------- desglose */
@@ -1465,4 +1519,41 @@ svg.icono {
     align-items: flex-start;
     gap: 6px;
   }
+}
+
+.app.cargando .boton-desglose {
+  visibility: hidden;
+}
+
+/* Convertidor Q -> $ (no afecta el presupuesto) */
+.conversion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.campo-quetzales {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.campo-quetzales .prefijo {
+  position: absolute;
+  left: 10px;
+  font-weight: 600;
+  color: var(--texto-secundario);
+  pointer-events: none;
+}
+.campo-quetzales .campo.monto {
+  width: 128px;
+  padding-left: 26px;
+}
+.conversion .igual {
+  color: var(--texto-secundario);
+}
+.conversion .valor {
+  margin-left: auto;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--marca);
 }

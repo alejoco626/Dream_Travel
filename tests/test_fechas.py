@@ -47,5 +47,40 @@ class PruebaFechas(unittest.TestCase):
         self.assertEqual((pago, holgada), (date(2026, 11, 5), False))
 
 
+
+class PruebaRevisarFechas(unittest.TestCase):
+    HOY = date(2026, 11, 23)
+
+    def revisar(self, viaje, cancelacion):
+        from calculadora.fechas import revisar_fechas
+        return revisar_fechas(viaje, cancelacion, self.HOY)
+
+    def test_errores(self):
+        casos = {
+            ("20/12", ""): ("viaje", "incompleta"),
+            ("31/02/2027", ""): ("viaje", "no existe"),
+            ("20/12/2035", ""): ("viaje", "año"),
+            ("01/11/2026", ""): ("viaje", "ya pasó"),
+            ("20/12/2026", "30/13/2026"): ("cancelacion", "no existe"),
+            ("20/12/2026", "25/12/2026"): ("cancelacion", "después del viaje"),
+            ("20/12/2026", "01/11/2026"): ("cancelacion", "ya no es reembolsable"),
+        }
+        for (viaje, cancelacion), (campo, texto) in casos.items():
+            resultado = self.revisar(viaje, cancelacion)
+            self.assertEqual((resultado["tono"], resultado["campo"]), ("error", campo), (viaje, cancelacion))
+            self.assertIn(texto, resultado["texto"], (viaje, cancelacion))
+        self.assertTrue(self.revisar("20/1", "")["incompleta"])
+
+    def test_sin_errores(self):
+        self.assertEqual(self.revisar("", "")["tono"], "neutro")
+        self.assertEqual(self.revisar("20/12/2026", "")["tono"], "neutro")
+        bien = self.revisar("20/03/2027", "10/01/2027")
+        self.assertEqual((bien["texto"], bien["tono"]), ("Fecha de pago: 20/02/2027", "exito"))
+        # el pago (15 días antes de la cancelación) ya pasó: se avisa que hay que pagar hoy
+        tarde = self.revisar("10/12/2026", "30/11/2026")
+        self.assertEqual(tarde["tono"], "peligro")
+        self.assertIn("hay que pagar hoy", tarde["texto"])
+
+
 if __name__ == "__main__":
     unittest.main()

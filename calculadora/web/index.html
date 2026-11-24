@@ -58,10 +58,7 @@
                 <span class="riel"></span>Repartir monto
               </label>
             </div>
-            <p class="nota nota-servicios" id="nota-servicios">
-              Escribe el monto total de cada grupo · Diseñador: precio por persona · En Misceláneos
-              marca la casilla para incluir niños o infantes
-            </p>
+            <p class="nota nota-servicios" id="nota-servicios">Monto total de cada grupo · Diseñador: precio por persona</p>
             <div class="esqueleto">
               <div class="barra-esqueleto" style="width: 100%"></div>
               <div class="barra-esqueleto alta" style="width: 100%"></div>
@@ -98,7 +95,8 @@
               <div class="barra-esqueleto" style="width: 20%"></div>
               <div class="barra-esqueleto alta" style="width: 50%"></div>
             </div>
-            <div class="contenido">
+            <div class="contenido pago">
+              <div class="pago-fechas">
               <label class="casilla">
                 <input type="checkbox" class="oculto-accesible" id="no-reembolsable" />
                 <span class="caja"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
@@ -129,21 +127,23 @@
                   <div class="aviso-pago neutro" id="aviso-pago">Escribe las dos fechas para ver la fecha de pago.</div>
                 </div>
               </div>
+              </div>
               <div class="reserva">
-                <span class="etiqueta">Monto para reservar:</span>
-                <span class="valor" id="monto-reserva">$ 0.00</span>
+                <span class="etiqueta">Monto para reservar</span>
+                <span class="valor copiable" id="monto-reserva">$ 0.00</span>
               </div>
             </div>
           </section>
 
           <!-- DESGLOSE -->
           <section class="tarjeta" aria-labelledby="t-desglose">
-            <div class="cabeza-seccion"><h2 class="titulo-seccion" id="t-desglose">DESGLOSE</h2></div>
-            <div class="esqueleto"><div class="barra-esqueleto" style="width: 16%"></div></div>
-            <div class="contenido">
+            <div class="cabeza-seccion con-interruptor cabeza-desglose">
+              <h2 class="titulo-seccion" id="t-desglose">DESGLOSE</h2>
               <button class="boton enlace boton-desglose" id="boton-desglose" type="button" aria-expanded="false">
-                <svg class="icono"><use href="#i-flecha" /></svg><span>Ver desglose</span>
+                <span>Ver desglose</span><svg class="icono"><use href="#i-flecha" /></svg>
               </button>
+            </div>
+            <div class="contenido">
               <div class="plegable cerrado" id="bloque-desglose">
                 <div class="interior" id="contenido-desglose"></div>
               </div>
@@ -178,27 +178,38 @@
             <div class="resumen-totales">
               <div>
                 <div class="etiqueta">Total PVP</div>
-                <div class="cifra" id="total-pvp">$ 0.00</div>
-                <div class="secundario" id="total-pvp-q">Q 0.00</div>
+                <div class="cifra copiable" id="total-pvp">$ 0.00</div>
+                <div class="secundario copiable" id="total-pvp-q">Q 0.00</div>
               </div>
               <div class="col-desc">
                 <div class="bloque-descuento">
                   <div class="etiqueta">Con descuento · efectivo</div>
-                  <div class="cifra" id="total-descuento">$ 0.00</div>
-                  <div class="secundario" id="total-descuento-q">Q 0.00</div>
+                  <div class="cifra copiable" id="total-descuento">$ 0.00</div>
+                  <div class="secundario copiable" id="total-descuento-q">Q 0.00</div>
                 </div>
               </div>
+            </div>
+
+            <div class="divisor"></div>
+            <h2 class="titulo-seccion" id="t-convertir">CONVERTIR Q A $</h2>
+            <div class="conversion" data-ayuda="Solo para consultar: no cambia el presupuesto">
+              <label class="campo-quetzales">
+                <span class="prefijo">Q</span>
+                <input class="campo monto" id="convertir-q" autocomplete="off" aria-labelledby="t-convertir" />
+              </label>
+              <span class="igual">=</span>
+              <span class="valor copiable" id="convertir-usd">$ 0.00</span>
             </div>
 
             <div class="divisor"></div>
             <h2 class="titulo-seccion">AJUSTE DE PRECIO ADULTO</h2>
             <div class="ajuste">
               <span>Precio adulto actual</span>
-              <span class="valor" id="ajuste-actual">$ 0.00</span>
+              <span class="valor copiable" id="ajuste-actual">$ 0.00</span>
               <label for="ajuste-nuevo">Precio adulto nuevo</label>
               <input class="campo monto" id="ajuste-nuevo" autocomplete="off" data-ayuda="Escribe el precio por adulto que quieres ofrecer" />
               <strong>Diferencia total</strong>
-              <span class="diferencia" id="ajuste-diferencia">—</span>
+              <span class="diferencia copiable" id="ajuste-diferencia">—</span>
             </div>
           </div>
 

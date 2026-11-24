@@ -106,6 +106,7 @@ class PruebaCalculo(unittest.TestCase):
         self.assertEqual(reserva("2", "1", "1"), "$ 2,125.00")
         self.assertEqual(reserva("2", "0", "1"), "$ 2,125.00")
 
+    @mock.patch.object(api, "hoy", lambda: __import__("datetime").date(2026, 9, 1))
     def test_fecha_de_pago(self):
         pago = api.calcular_estado(escenario())["pago"]
         self.assertIn("Escribe las dos fechas", pago["texto"])
@@ -248,7 +249,8 @@ class PruebaApi(unittest.TestCase):
         self.assertEqual(
             publicos,
             [
-                "buscar_actualizacion", "calcular", "copiar_captura", "descargar_actualizacion",
+                "buscar_actualizacion", "calcular", "convertir_quetzales", "copiar_captura", "copiar_texto",
+                "descargar_actualizacion",
                 "estado_descarga", "formatear_monto", "inicio", "instalar_actualizacion", "listo",
                 "registrar_error_pagina",
             ],
@@ -283,6 +285,21 @@ class PruebaApi(unittest.TestCase):
             respuesta = api.Api().calcular({"personas": {"ADULTOS": 1}, "servicios": [{"base": "NO EXISTE"}]})
         self.assertFalse(respuesta["ok"])
         registrar.assert_called_once()
+
+    def test_convertir_quetzales(self):
+        convertir = api.Api().convertir_quetzales
+        self.assertEqual(convertir("1000"), {"valido": True, "dolares": "$ 126.90"})
+        self.assertEqual(convertir("Q 7,880"), {"valido": True, "dolares": "$ 1,000.00"})
+        self.assertEqual(convertir(""), {"valido": True, "dolares": "$ 0.00"})
+        self.assertFalse(convertir("abc")["valido"])
+
+    def test_copiar_texto(self):
+        copiados = []
+        with mock.patch.object(api, "copiar_texto_portapapeles", copiados.append):
+            self.assertEqual(api.Api().copiar_texto(" $ 1,161.00 "), {"ok": True})
+            self.assertFalse(api.Api().copiar_texto("")["ok"])
+            self.assertFalse(api.Api().copiar_texto("x" * 500)["ok"])
+        self.assertEqual(copiados, ["$ 1,161.00"])
 
     def test_captura(self):
         from PIL import Image

@@ -8,8 +8,7 @@
   const TIPO_DE_CLAVE = { adultos_ninos: "NIÑOS", adultos_ninos_infantes: "INFANTES" };
   const CLASE_COLUMNA = { adultos: "col-adultos", adultos_ninos: "col-ninos", adultos_ninos_infantes: "col-infantes" };
   const NOMBRE_SINGULAR = { ADULTOS: "Adulto", "NIÑOS": "Niño", INFANTES: "Infante" };
-  const NOTA_NORMAL =
-    "Escribe el monto total de cada grupo · Diseñador: precio por persona · En Misceláneos marca la casilla para incluir niños o infantes";
+  const NOTA_NORMAL = "Monto total de cada grupo · Diseñador: precio por persona";
   const RETARDO_CALCULO_MS = 120;
   const RETARDO_AYUDA_MS = 450;
   const RETARDO_NOVEDADES_MS = 500;
@@ -360,7 +359,7 @@
     texto(
       $("#nota-servicios"),
       encendido
-        ? `Escribe el total del grupo completo (Diseñador: precio por persona) · Se reparte por persona: adulto ${pesos.ADULTOS} · niño ${pesos["NIÑOS"]} · infante ${pesos.INFANTES}`
+        ? `Total del grupo (Diseñador: por persona) · Se reparte: adulto ${pesos.ADULTOS} · niño ${pesos["NIÑOS"]} · infante ${pesos.INFANTES}`
         : NOTA_NORMAL
     );
     const clave = activo("INFANTES") ? "adultos_ninos_infantes" : activo("NIÑOS") ? "adultos_ninos" : "adultos";
@@ -637,14 +636,14 @@
       const bloque = crear(`
         <div class="bloque-tipo" data-tipo="${tipo.clave}">
           <div class="nombre-tipo"></div>
-          <div class="valor precio col-pvp" data-campo="pvp">$ 0.00</div>
-          <div class="valor precio col-desc"><span data-campo="descuento">$ 0.00</span></div>
+          <div class="valor precio col-pvp"><span class="copiable" data-campo="pvp">$ 0.00</span></div>
+          <div class="valor precio col-desc"><span class="copiable" data-campo="descuento">$ 0.00</span></div>
           <div class="cantidad" data-campo="cantidad">× 0</div>
-          <div class="valor secundario col-pvp" data-campo="pvp_q">Q 0.00</div>
-          <div class="valor secundario col-desc"><span data-campo="descuento_q">Q 0.00</span></div>
+          <div class="valor secundario col-pvp"><span class="copiable" data-campo="pvp_q">Q 0.00</span></div>
+          <div class="valor secundario col-desc"><span class="copiable" data-campo="descuento_q">Q 0.00</span></div>
           <div></div>
-          <div class="valor secundario col-pvp" data-campo="pvp_total">Total $ 0.00</div>
-          <div class="valor secundario col-desc"><span data-campo="descuento_total">Total $ 0.00</span></div>
+          <div class="valor secundario col-pvp"><span class="copiable" data-campo="pvp_total">Total $ 0.00</span></div>
+          <div class="valor secundario col-desc"><span class="copiable" data-campo="descuento_total">Total $ 0.00</span></div>
         </div>`);
       texto($(".nombre-tipo", bloque), tipo.nombre);
       tabla.append(bloque);
@@ -726,10 +725,36 @@
 
   function mostrarPago(pago) {
     $("#bloque-fechas").classList.toggle("cerrado", !pago.visible);
+    const campos = { viaje: $("#fecha-viaje"), cancelacion: $("#fecha-cancelacion") };
+    // Una fecha a medio escribir no es un error todavía: se marca al salir del campo.
+    const escribiendo = Boolean(pago.incompleta) && document.activeElement === campos[pago.campo];
+    Object.entries(campos).forEach(([clave, campo]) =>
+      campo.classList.toggle("invalido", pago.visible && !escribiendo && pago.campo === clave)
+    );
     const aviso = $("#aviso-pago");
     if (!pago.visible) return;
+    if (escribiendo) {
+      aviso.className = "aviso-pago neutro";
+      poner(aviso, "Escribe la fecha completa: dd/mm/aaaa.");
+      return;
+    }
     aviso.className = `aviso-pago ${pago.tono}`;
     poner(aviso, pago.texto);
+  }
+
+  /** Clic en una cifra: se copia tal como se ve ("$ 1,161.00" o "Q 9,149.00"). */
+  async function copiarCifra(elemento) {
+    const cifra = elemento.textContent.replace(/^Total\s+/, "").trim();
+    if (!cifra || cifra === "—") return;
+    const respuesta = await api.copiar_texto(cifra);
+    if (!respuesta || !respuesta.ok) {
+      avisar((respuesta && respuesta.mensaje) || "No se pudo copiar.", "error", 2500);
+      return;
+    }
+    elemento.classList.remove("copiado");
+    void elemento.offsetWidth;
+    elemento.classList.add("copiado");
+    avisar(`Copiado: ${cifra}`, "exito", 1300);
   }
 
   function mostrarResultados(resultado) {
@@ -860,6 +885,9 @@
     $("#fecha-viaje").value = "";
     $("#fecha-cancelacion").value = "";
     $("#ajuste-nuevo").value = "";
+    $("#convertir-q").value = "";
+    $("#convertir-q").classList.remove("invalido");
+    texto($("#convertir-usd"), "$ 0.00");
     actualizarColumnas();
     calcular(false);
     const adultos = $('#personas input[data-tipo="ADULTOS"]');
@@ -906,6 +934,10 @@
   function prepararCaptura(documento) {
     const ventana = documento.defaultView;
     documento.getElementById("app").classList.add("capturando");
+    // El desglose sale en la captura aunque esté plegado en la pantalla
+    documento.getElementById("bloque-desglose").classList.remove("cerrado");
+    const botonDesglose = documento.getElementById("boton-desglose");
+    if (botonDesglose) botonDesglose.remove();
 
     // html2canvas no resuelve <use>: se copia el dibujo del símbolo dentro de cada ícono
     // y se fijan los colores calculados, porque el SVG se dibuja aparte, sin la hoja de estilos.
@@ -1162,6 +1194,10 @@
     $("#boton-calcular").addEventListener("click", () => calcular(true));
     $("#boton-limpiar").addEventListener("click", limpiar);
     $("#boton-captura").addEventListener("click", capturar);
+    document.addEventListener("click", (evento) => {
+      const cifra = evento.target.closest(".copiable");
+      if (cifra && !window.getSelection().toString()) copiarCifra(cifra);
+    });
     $("#boton-desglose").addEventListener("click", alternarDesglose);
     $("#redondear").addEventListener("change", () => calcular(false));
     $("#repartir").addEventListener("change", () => aplicarReparto());
@@ -1181,10 +1217,27 @@
           calcular(false);
         }
       });
+      entrada.addEventListener("blur", () => calcular(false));
     });
     $$("[data-calendario]").forEach((boton) =>
       boton.addEventListener("click", () => abrirCalendario($(`#${boton.dataset.calendario}`), boton))
     );
+
+    // Convertidor Q -> $: aparte del presupuesto
+    const quetzales = $("#convertir-q");
+    let convirtiendo = 0;
+    quetzales.addEventListener("input", async () => {
+      const mia = ++convirtiendo;
+      const respuesta = await api.convertir_quetzales(quetzales.value);
+      if (mia !== convirtiendo || !respuesta) return;
+      quetzales.classList.toggle("invalido", !respuesta.valido);
+      poner($("#convertir-usd"), respuesta.dolares);
+    });
+    quetzales.addEventListener("focus", () => quetzales.select());
+    quetzales.addEventListener("keydown", (evento) => {
+      if (evento.key === "Enter") quetzales.blur();
+    });
+    texto($("#t-convertir"), `CONVERTIR Q A $ · ${config.tipo_cambio}`);
 
     const ajuste = $("#ajuste-nuevo");
     conectarMonto(ajuste, null, () => programarCalculo(), true);
