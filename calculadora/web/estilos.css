@@ -1137,7 +1137,6 @@ div.copiable {
 .resumen-totales {
   display: grid;
   grid-template-columns: 1fr var(--ancho-descuento-total);
-  margin-top: 6px;
 }
 .resumen-totales .col-desc {
   text-align: left;
@@ -1147,7 +1146,7 @@ div.copiable {
   color: var(--texto-secundario);
 }
 .resumen-totales .cifra {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--marca);
 }
@@ -1158,29 +1157,6 @@ div.copiable {
 .resumen-totales .bloque-descuento .etiqueta {
   color: var(--acento);
   font-weight: 600;
-}
-
-.ajuste {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  row-gap: 6px;
-  column-gap: 12px;
-  margin-top: 6px;
-}
-.ajuste .valor {
-  text-align: right;
-  font-weight: 700;
-  font-size: 15px;
-}
-.ajuste .diferencia {
-  text-align: right;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--acento);
-}
-.ajuste .campo.monto {
-  width: 128px;
 }
 
 .botones-panel {
@@ -1525,12 +1501,83 @@ div.copiable {
   visibility: hidden;
 }
 
-/* Convertidor Q -> $ (no afecta el presupuesto) */
-.conversion {
+
+/* Panel: Por persona es lo principal; el Resumen es apoyo; las herramientas, ayudas */
+.bloque-resumen {
+  margin-top: 14px;
+  padding: 10px 14px 12px;
+  border-radius: 12px;
+  background: var(--superficie);
+  flex: none;
+}
+.subtitulo {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-secundario);
+}
+.resumen-totales .etiqueta {
+  font-size: 11px;
+}
+.herramientas {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--divisor);
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  flex: none;
+}
+.herramienta {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 6px;
+  gap: 8px;
+}
+.herramienta.ajuste {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.herramienta .linea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nombre-herramienta {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-secundario);
+  min-width: 78px;
+}
+.herramienta .detalle {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+.herramienta .detalle .copiable {
+  color: var(--texto);
+  font-weight: 600;
+}
+.herramienta .valor {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto);
+  white-space: nowrap;
+}
+.herramienta .linea .detalle + .valor {
+  margin-left: 0;
+}
+.herramienta .diferencia {
+  color: var(--acento);
+}
+.campo.monto.chico {
+  height: 30px;
+  width: 112px;
+  font-size: 13px;
 }
 .campo-quetzales {
   position: relative;
@@ -1539,21 +1586,15 @@ div.copiable {
 }
 .campo-quetzales .prefijo {
   position: absolute;
-  left: 10px;
+  left: 9px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--texto-secundario);
   pointer-events: none;
 }
 .campo-quetzales .campo.monto {
-  width: 128px;
-  padding-left: 26px;
+  padding-left: 22px;
 }
-.conversion .igual {
+.herramienta .igual {
   color: var(--texto-secundario);
-}
-.conversion .valor {
-  margin-left: auto;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--marca);
 }

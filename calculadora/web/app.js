@@ -1237,7 +1237,7 @@
     quetzales.addEventListener("keydown", (evento) => {
       if (evento.key === "Enter") quetzales.blur();
     });
-    texto($("#t-convertir"), `CONVERTIR Q A $ · ${config.tipo_cambio}`);
+    $("#herramienta-conversion").dataset.ayuda = `Quetzales a dólares (tipo de cambio ${config.tipo_cambio}) · solo para consultar, no cambia el presupuesto`;
 
     const ajuste = $("#ajuste-nuevo");
     conectarMonto(ajuste, null, () => programarCalculo(), true);

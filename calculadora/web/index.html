@@ -173,44 +173,48 @@
           <div class="contenido">
             <div class="por-persona" id="por-persona"></div>
 
-            <div class="divisor"></div>
-            <h2 class="titulo-seccion">RESUMEN</h2>
-            <div class="resumen-totales">
-              <div>
-                <div class="etiqueta">Total PVP</div>
-                <div class="cifra copiable" id="total-pvp">$ 0.00</div>
-                <div class="secundario copiable" id="total-pvp-q">Q 0.00</div>
-              </div>
-              <div class="col-desc">
-                <div class="bloque-descuento">
-                  <div class="etiqueta">Con descuento · efectivo</div>
-                  <div class="cifra copiable" id="total-descuento">$ 0.00</div>
-                  <div class="secundario copiable" id="total-descuento-q">Q 0.00</div>
+            <!-- Apoyo: totales del presupuesto -->
+            <section class="bloque-resumen" aria-labelledby="t-resumen">
+              <h3 class="subtitulo" id="t-resumen">Resumen</h3>
+              <div class="resumen-totales">
+                <div>
+                  <div class="etiqueta">Total PVP</div>
+                  <div class="cifra copiable" id="total-pvp">$ 0.00</div>
+                  <div class="secundario copiable" id="total-pvp-q">Q 0.00</div>
+                </div>
+                <div class="col-desc">
+                  <div class="bloque-descuento">
+                    <div class="etiqueta">Con descuento · efectivo</div>
+                    <div class="cifra copiable" id="total-descuento">$ 0.00</div>
+                    <div class="secundario copiable" id="total-descuento-q">Q 0.00</div>
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div class="divisor"></div>
-            <h2 class="titulo-seccion" id="t-convertir">CONVERTIR Q A $</h2>
-            <div class="conversion" data-ayuda="Solo para consultar: no cambia el presupuesto">
-              <label class="campo-quetzales">
-                <span class="prefijo">Q</span>
-                <input class="campo monto" id="convertir-q" autocomplete="off" aria-labelledby="t-convertir" />
-              </label>
-              <span class="igual">=</span>
-              <span class="valor copiable" id="convertir-usd">$ 0.00</span>
-            </div>
-
-            <div class="divisor"></div>
-            <h2 class="titulo-seccion">AJUSTE DE PRECIO ADULTO</h2>
-            <div class="ajuste">
-              <span>Precio adulto actual</span>
-              <span class="valor copiable" id="ajuste-actual">$ 0.00</span>
-              <label for="ajuste-nuevo">Precio adulto nuevo</label>
-              <input class="campo monto" id="ajuste-nuevo" autocomplete="off" data-ayuda="Escribe el precio por adulto que quieres ofrecer" />
-              <strong>Diferencia total</strong>
-              <span class="diferencia copiable" id="ajuste-diferencia">—</span>
-            </div>
+            <!-- Ayudas: no cambian el presupuesto -->
+            <section class="herramientas" aria-label="Herramientas">
+              <div class="herramienta" id="herramienta-conversion">
+                <span class="nombre-herramienta" id="t-convertir">Conversión</span>
+                <label class="campo-quetzales">
+                  <span class="prefijo">Q</span>
+                  <input class="campo monto chico" id="convertir-q" autocomplete="off" aria-labelledby="t-convertir" />
+                </label>
+                <span class="igual">=</span>
+                <span class="valor copiable" id="convertir-usd">$ 0.00</span>
+              </div>
+              <div class="herramienta ajuste">
+                <div class="linea">
+                  <span class="nombre-herramienta" id="t-ajuste">Ajuste de diseñador</span>
+                  <span class="detalle">Adulto actual <span class="copiable" id="ajuste-actual">$ 0.00</span></span>
+                </div>
+                <div class="linea">
+                  <input class="campo monto chico" id="ajuste-nuevo" autocomplete="off" placeholder="Nuevo precio" aria-labelledby="t-ajuste" data-ayuda="Precio por adulto que quieres ofrecer" />
+                  <span class="detalle">Diferencia</span>
+                  <span class="valor diferencia copiable" id="ajuste-diferencia">—</span>
+                </div>
+              </div>
+            </section>
           </div>
 
           <div class="botones-panel">
