@@ -314,6 +314,22 @@ class PruebaApi(unittest.TestCase):
         with mock.patch.object(api, "registrar_error"):
             self.assertFalse(api.Api().copiar_captura("no es una imagen")["ok"])
 
+    def test_descarga_que_falla_con_error_raro_no_se_queda_quieta(self):
+        import http.client
+        import time
+
+        def falla(info, cola):
+            raise http.client.IncompleteRead(b"")
+
+        with mock.patch.object(api.actualizador, "hilo_descargar", falla), mock.patch.object(api, "registrar_error"):
+            descarga = api.DescargaEnCurso({"version": "9.9.9"})
+            for _ in range(50):
+                estado = descarga.estado()
+                if estado["estado"] != "descargando":
+                    break
+                time.sleep(0.02)
+        self.assertEqual(estado["estado"], "error")
+
     def test_actualizacion_solo_en_el_programa_instalado(self):
         self.assertIsNone(api.Api().buscar_actualizacion())
         self.assertEqual(api.Api().estado_descarga()["estado"], "error")

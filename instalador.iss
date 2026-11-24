@@ -76,8 +76,10 @@ var
 begin
   { Las versiones de un solo .exe dejaban un proceso sin ventana que bloqueaba el archivo
     y la actualizacion se quedaba esperando. Antes de copiar, se cierra cualquier copia
-    de la calculadora que siga corriendo. }
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM Calculadora_Dream_Travel.exe', '', SW_HIDE, ewWaitUntilTerminated, Codigo);
+    de la calculadora que siga corriendo.
+    Sin /T: la calculadora es la que abre este instalador, y /T cerraria tambien a sus
+    "hijos", es decir, a este mismo instalador. }
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM Calculadora_Dream_Travel.exe', '', SW_HIDE, ewWaitUntilTerminated, Codigo);
   Sleep(800);
   Result := '';
 end;

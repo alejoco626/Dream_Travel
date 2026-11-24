@@ -527,7 +527,16 @@ class DescargaEnCurso:
         self.cola = queue.Queue()
         self.progreso = 0.0
         self.resultado = None  # ("listo", ruta) o ("error", mensaje)
-        threading.Thread(target=actualizador.hilo_descargar, args=(info, self.cola), daemon=True).start()
+        threading.Thread(target=self._descargar, daemon=True).start()
+
+    def _descargar(self):
+        # Cualquier falla (también las de red que no son OSError) debe llegar a la pantalla;
+        # si el hilo muriera en silencio, la barra se quedaría quieta para siempre.
+        try:
+            actualizador.hilo_descargar(self.info, self.cola)
+        except Exception as error:  # noqa: BLE001
+            registrar_error(traceback.format_exc())
+            self.cola.put(("error", str(error) or error.__class__.__name__))
 
     def estado(self):
         while self.resultado is None:

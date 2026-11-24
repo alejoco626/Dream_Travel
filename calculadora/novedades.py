@@ -17,12 +17,6 @@ SECCIONES = (
 )
 
 NOVEDADES = {
-    "1.0.19": {
-        "correcciones": [
-            "La actualización ya no se queda congelada",
-            "Al cerrar la calculadora no queda nada abierto en segundo plano",
-        ],
-    },
     "1.0.18": {
         "nuevo": [
             "Interruptor Repartir monto para cotizaciones atípicas",
@@ -38,6 +32,8 @@ NOVEDADES = {
             "Ningún costo puede salir negativo",
             "El descuento cuadra con el PVP redondeado",
             "Se revisan las fechas que no existen",
+            "La actualización ya no se queda congelada",
+            "Al cerrar la calculadora no queda nada abierto en segundo plano",
         ],
     },
     "1.0.17": {
