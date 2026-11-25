@@ -42,7 +42,9 @@ class PruebaFormato(unittest.TestCase):
     def test_diferencia_total(self):
         from calculadora.calculo import diferencia_total
         cantidades = {"ADULTOS": 2, "NIÑOS": 2, "INFANTES": 1}
-        self.assertEqual(diferencia_total(2045, 1900.25, cantidades), 289.5)
+        self.assertEqual(diferencia_total(2045, 1900.25, cantidades), 723.75)  # x 5 personas
+        cantidades = {"ADULTOS": 4, "NIÑOS": 1, "INFANTES": 0}
+        self.assertEqual(diferencia_total(1358, 1290, cantidades), 340)
 
     def test_formatos(self):
         self.assertEqual(dinero(1234.5), "$ 1,234.50")

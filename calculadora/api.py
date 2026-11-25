@@ -303,7 +303,7 @@ def calcular_estado(estado):
 
     presupuesto = calcular_presupuesto(capturados, cantidades)
     resultado["avisos"] = avisos_de_cotizacion(capturados, cantidades)
-    precios = precios_por_persona(presupuesto, cantidades, redondear)
+    precios = precios_por_persona(presupuesto, cantidades, redondear, cuadrar=bool(estado.get("repartir")))
 
     resultado["por_persona"] = {
         tipo: {

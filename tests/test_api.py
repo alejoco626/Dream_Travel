@@ -87,12 +87,12 @@ class PruebaCalculo(unittest.TestCase):
 
     def test_ajuste_de_precio_adulto(self):
         resultado = api.calcular_estado(escenario(redondear=True, ajuste_nuevo="1,151.50"))
-        # (1,252 - 1,151.50) x 2 adultos = 201.00
-        self.assertEqual(resultado["ajuste"], {"actual": "$ 1,252.00", "diferencia": "$ 201.00"})
+        # (1,252 - 1,151.50) x 4 personas (2 adultos, 1 niño, 1 infante) = 402.00
+        self.assertEqual(resultado["ajuste"], {"actual": "$ 1,252.00", "diferencia": "$ 402.00"})
         resultado = api.calcular_estado(escenario(redondear=True, ajuste_nuevo="1151.76"))
-        self.assertEqual(resultado["ajuste"]["diferencia"], "$ 200.00")  # 200.48 -> 200
+        self.assertEqual(resultado["ajuste"]["diferencia"], "$ 401.00")  # 400.96 -> 401
         resultado = api.calcular_estado(escenario(ajuste_nuevo="1151.76"))
-        self.assertEqual(resultado["ajuste"]["diferencia"], "$ 200.34")  # sin redondeo
+        self.assertEqual(resultado["ajuste"]["diferencia"], "$ 400.68")  # sin redondeo
         self.assertEqual(api.calcular_estado(escenario())["ajuste"]["diferencia"], "—")
 
     def test_monto_para_reservar(self):
@@ -224,6 +224,15 @@ class PruebaRepartir(unittest.TestCase):
             resultado["reparto"][0], {"ADULTOS": "$ 670.96", "NIÑOS": "$ 503.22", "INFANTES": "$ 100.64"}
         )
         self.assertEqual(resultado["monto_reserva"], "$ 3,061.25")  # 2,449 / 0.80
+
+    def test_el_total_redondeado_queda_cerca_del_exacto(self):
+        # Antes, cada tipo se redondeaba por separado y el total podía subir 1 a 3 dólares.
+        for monto in range(1500, 4000, 37):
+            for personas in (("4", "1", "0"), ("3", "2", "1"), ("2", "2", "1"), ("5", "0", "2")):
+                resultado = api.calcular_estado(self.estado([self.total("BOLETOS NETOS", monto)], personas))
+                pvp = float(resultado["totales"]["pvp"][2:].replace(",", ""))
+                exacto = monto / 0.80  # proporción de costo de Boletos
+                self.assertLessEqual(abs(pvp - exacto), 2.0 + 1e-6, (monto, personas, pvp, exacto))
 
     def test_el_infante_nunca_paga_mas_que_el_nino(self):
         for personas in (("1", "3", "1"), ("4", "1", "2"), ("2", "0", "1"), ("1", "1", "0")):

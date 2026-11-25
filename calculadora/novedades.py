@@ -29,6 +29,8 @@ NOVEDADES = {
         "cambios": [
             "Las capturas se guardan con fecha, referencia, personas y monto (Ctrl + Shift + S)",
             "Atajo Ctrl + L para limpiar",
+            "Ajuste de diseñador: ahora multiplica los dos precios por todas las personas y muestra la resta",
+            "Repartir monto con Redondear: el total ya no se desvía más de 2 dólares del monto exacto",
         ],
     },
     "1.0.18": {

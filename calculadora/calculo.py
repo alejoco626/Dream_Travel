@@ -205,15 +205,34 @@ class PreciosPorPersona:
     total_descuento_q: float = 0.0
 
 
-def precios_por_persona(presupuesto, cantidades, redondear):
+def pvp_redondeados(presupuesto, cantidades, cuadrar):
+    """PVP por persona redondeado al entero más próximo.
+
+    Cada tipo redondea por su cuenta y el error se multiplica por las personas (3 adultos
+    con 0.40 de más son 1.20 de más), así que el total puede subir o bajar 1 o 2 dólares.
+    Con cuadrar=True el precio del adulto se corrige en 1 o 2 dólares para que el total
+    quede lo más cerca posible del total exacto.
+    """
+    pvp = {tipo: redondear_cercano(presupuesto.pvp_persona[tipo]) for tipo in TIPOS_PERSONA}
+    adultos = cantidades[ADULTOS]
+    if cuadrar and adultos:
+        exacto = sum(presupuesto.pvp_persona[tipo] * cantidades[tipo] for tipo in TIPOS_PERSONA)
+        otros = sum(pvp[tipo] * cantidades[tipo] for tipo in TIPOS_PERSONA if tipo != ADULTOS)
+        mejor = min(range(-2, 3), key=lambda paso: (abs(exacto - otros - (pvp[ADULTOS] + paso) * adultos), abs(paso)))
+        pvp[ADULTOS] = max(0.0, pvp[ADULTOS] + mejor)
+    return pvp
+
+
+def precios_por_persona(presupuesto, cantidades, redondear, cuadrar=False):
     """Con redondeo, cada precio por persona ($ y Q) va al entero más próximo (.50 sube)
     y los totales se calculan a partir de esos precios redondeados."""
     ajustar = redondear_cercano if redondear else (lambda valor: valor)
+    pvp_por_tipo = pvp_redondeados(presupuesto, cantidades, cuadrar) if redondear else presupuesto.pvp_persona
     precios = PreciosPorPersona()
     total_pvp_q = total_descuento_q = 0.0
     for tipo in TIPOS_PERSONA:
         numero = cantidades[tipo]
-        pvp = ajustar(presupuesto.pvp_persona[tipo])
+        pvp = pvp_por_tipo[tipo]
         # Con redondeo, el descuento sale del PVP que se ve (PVP redondeado / 1.05).
         descuento = ajustar(pvp / DIVISOR_DESCUENTO_EFECTIVO) if redondear else presupuesto.descuento_persona[tipo]
         precios.pvp[tipo] = pvp
@@ -241,5 +260,6 @@ def redondear_cercano(valor):
 
 
 def diferencia_total(precio_adulto, precio_nuevo, cantidades):
-    """(precio adulto actual - precio adulto nuevo) x cantidad de adultos."""
-    return (precio_adulto - precio_nuevo) * cantidades[ADULTOS]
+    """(precio de la calculadora - precio del diseñador) x todas las personas (adultos, niños e infantes)."""
+    personas = sum(cantidades[tipo] for tipo in TIPOS_PERSONA)
+    return precio_adulto * personas - precio_nuevo * personas
