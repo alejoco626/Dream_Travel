@@ -232,7 +232,9 @@ class PruebaRepartir(unittest.TestCase):
                 resultado = api.calcular_estado(self.estado([self.total("BOLETOS NETOS", monto)], personas))
                 pvp = float(resultado["totales"]["pvp"][2:].replace(",", ""))
                 exacto = monto / 0.80  # proporción de costo de Boletos
-                self.assertLessEqual(abs(pvp - exacto), 2.0 + 1e-6, (monto, personas, pvp, exacto))
+                # El precio del adulto mueve el total de a "adultos" dólares: el mejor error posible es adultos / 2.
+                tope = max(2.0, int(personas[0]) / 2)
+                self.assertLessEqual(abs(pvp - exacto), tope + 1e-6, (monto, personas, pvp, exacto))
 
     def test_el_infante_nunca_paga_mas_que_el_nino(self):
         for personas in (("1", "3", "1"), ("4", "1", "2"), ("2", "0", "1"), ("1", "1", "0")):
